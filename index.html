@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flight Log</title>
+  <link rel="icon" href="img/basketFavicon.png"/>
+  <!-- PaperCSS -->
+  <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css"/>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css"/>
+    <link rel="stylesheet" href="css/modal.css"/>
+  <!-- Icons -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+</head>
+<body class="container">
+<!-- Welcome Modal -->
+<div id="welcome-modal" class="custom-modal">
+  <div class="custom-modal-content">
+    <h4>Welcome!</h4>
+    <p>Please enter your name to get started:</p>
+    <input type="text" id="name-input" placeholder="Your name"/>
+    <button id="save-name-btn" class="paper-btn">Save</button>
+  </div>
+</div>
+  <!-- Header -->
+  <header class="row">
+    <div class="col">
+      <img src="img/flightLogHeader.png" alt="Flight Log" style="max-width:100%;height:auto;"/>
+    </div>
+  </header>
+
+  <!-- Welcome Modal -->
+
+  <!-- Alerts Modal -->
+  <div id="generic-modal" class="modal" style="display:none;">
+    <div class="modal-body">
+      <p id="generic-modal-message"></p>
+      <button id="generic-modal-ok" class="btn-primary">OK</button>
+    </div>
+  </div>
+
+  <!-- Score Entry Modal -->
+  <div id="score-modal" class="modal" style="display:none;">
+    <div class="modal-body">
+      <h5>Enter Score</h5>
+      <form id="score-form">
+        <label for="strokes-input">Strokes</label>
+        <input type="number" id="strokes-input" required/>
+        <!-- Additional fields for C1R, putts, penalties would go here -->
+        <button type="submit" id="save-score-btn" class="btn-primary btn-block">Save</button>
+        <button type="button" id="cancel-score-btn" class="btn-secondary">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Controls -->
+
+<section id="controls-section" class="row">
+  <div class="col-12">
+    <select id="course-select" onchange="enableSelectCourse()">
+      <option value="">Select a course</option>
+    </select>
+  </div>
+  <div class="col-12 button-row">
+    <button id="select-course-btn" class="btn btn--big btn--purple-blue">Select Course</button>
+    <button id="new-course-btn" class="btn btn--big btn--purple-blue">New Course</button>
+  </div>
+  <div class="col-12 button-row">
+    <button id="delete-course-btn" class="btn btn--big btn--purple-blue">Delete Course</button>
+    <button id="clear-name-btn" class="btn btn--big btn--purple-blue">Clear Name</button>
+  </div>
+</section>
+
+  <section id="course-actions-section" class="row">
+    
+    
+  </section>
+
+  <!-- Statistics Cards -->
+  <section class="row" id="stats-section">
+    
+    </div>
+    
+    </div>
+  </section>
+
+  <!-- Scorecard -->
+  <div id="scorecard-card" class="card" style="display:none;">
+    <div class="card-body" id="scorecard-container"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/modals.js"></script>
+  <script src="js/modals.js"></script>
+    <script src="js/darkmode.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/namePrompt.js"></script>
+
+
+</div>
+
+
+
+</div>
+
+
+
+<!-- Welcome Modal -->
+
+
+<!-- Clear Name Confirmation Modal -->
+<div id="clear-name-modal" class="custom-modal">
+  <div class="custom-modal-content">
+    <h4>Confirm</h4>
+    <p>Are you sure you want to clear your name?</p>
+    <button id="cancel-clear-name-btn" class="paper-btn">Cancel</button>
+    <button id="confirm-clear-name-btn" class="paper-btn">Confirm</button>
+  </div>
+</div>
+
+<!-- No-Course Selected Modal -->
+<div id="no-course-modal" class="custom-modal">
+  <div class="custom-modal-content">
+    <h4>Please select a course</h4>
+    <p>You need to choose a course from the dropdown before continuing.</p>
+    <button id="no-course-close-btn" class="paper-btn">OK</button>
+  </div>
+</div>
+
+
+  <!-- Bottom Docked Menu -->
+  <nav id="bottom-menu">
+    <ul class="bottom-menu-list">
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Courses</a></li>
+      <li><a href="#">Stats</a></li>
+    </ul>
+  <div class="toggle-switch">
+    <input type="checkbox" id="lock-toggle">
+    <label for="lock-toggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  </nav>
+</body>
+
+</html>

@@ -1,0 +1,1221 @@
+
+:root {
+    --dark-teal: #026873;
+    --teal: #038C7F;
+    --sea-green: #038C65;
+    --forest: #2F5936;
+    --brown: #8C602A;
+}
+
+/* make the <select> truly full-width */
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.4rem 2rem;
+  font-size: 1rem;
+}
+
+/* layout helper for any row of two buttons */
+.button-row {
+  display: flex;
+  justify-content: space-evenly;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* Make buttons share row equally */
+.button-row .btn--purple-blue {
+  flex: 1;
+  margin: 0;
+}
+
+/* unified button look */
+.btn-select {
+  flex: 1;
+  padding: 0.4rem 2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  background-color: #008CBA;
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.btn-select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-select:not(:disabled):hover {
+  background-color: #006f9a;
+}
+/* PaperCSS purple-blue button override */
+.btn--purple-blue {
+  white-space: nowrap;
+  --btn-bg: #800080;
+  --btn-border: 2px solid #0080FF;
+  --btn-color: #0080FF;
+}
+
+/* PaperCSS purple-blue button override with adjusted shape */
+.btn--purple-blue {
+  white-space: nowrap;
+  --btn-bg: #800080;
+  --btn-border: 2px solid #0080FF;
+  --btn-color: #0080FF;
+  padding: 0.4rem 2rem; /* skinnier (less tall), wider (more horizontal) */
+       /* ensure consistent width */
+}
+
+/* Ensure all buttons in controls-section use the same purple background and blue border/text */
+#controls-section .btn {
+  --btn-bg: #800080 !important;
+  --btn-border: 2px solid #0080FF !important;
+  --btn-color: #0080FF !important;
+}
+
+/* Ensure all control buttons are uniform size and shade */
+#controls-section .button-row .btn--purple-blue {
+  flex: 1 !important;
+  margin: 0 !important;
+  /* consistent padding: top/bottom, left/right */
+  padding: 0.6rem 2rem !important;
+  /* enforce single-line labels */
+  white-space: nowrap !important;
+  /* uniform line-height */
+  line-height: 1.2 !important;
+}
+
+/* Keep disabled buttons at full opacity */
+.btn--purple-blue:disabled {
+  opacity: 1 !important;
+}
+
+/* Custom border override for buttons and select using PaperCSS */
+}
+}
+
+
+/* Override for course dropdown border color */
+    border: 2px solid #F27405 !important;
+}
+
+/* Make Select Course and New Course true push buttons with press animation */
+#select-course-btn,
+#new-course-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    /* Optional styling for 3D look */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+#select-course-btn:active,
+#new-course-btn:active {
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Optional hover effect */
+#select-course-btn:hover,
+#new-course-btn:hover {
+    box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+}
+
+
+/* Override: dropdown border matches button color */
+    border: 2px solid #F28B0C !important;
+}
+
+/* Push button animation for Delete Course and Clear Name */
+#delete-course-btn,
+#clear-name-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+#delete-course-btn:active,
+#clear-name-btn:active {
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+#delete-course-btn:hover,
+#clear-name-btn:hover {
+    box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+}
+
+
+/* Update border color for dropdown and all main buttons */
+#select-course-btn,
+#new-course-btn,
+#delete-course-btn,
+#clear-name-btn {
+    border: 2px solid #038c7f !important;
+}
+
+/* Color Palette Variables */
+
+
+/* Modal Styling Using Palette */
+#no-course-modal.paper-dialog {
+    border: 2px solid var(--teal) !important;
+    background-color: white;
+    color: var(--burnt);
+}
+
+#no-course-modal.paper-dialog h4 {
+    color: var(--mustard);
+}
+
+#no-course-modal.paper-dialog p {
+    color: var(--teal);
+}
+
+#no-course-modal.paper-dialog .paper-btn {
+    background-color: var(--orange);
+    border: 2px solid var(--burnt);
+    color: white;
+    transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+#no-course-modal.paper-dialog .paper-btn:hover {
+    background-color: var(--burnt);
+}
+
+#no-course-modal.paper-dialog .paper-btn:active {
+    transform: translateY(2px);
+}
+
+/* No-Course Modal color overrides */
+#no-course-modal .modal-body h5 {
+    color: var(--mustard);
+}
+#no-course-modal .modal-body p {
+    color: var(--teal);
+}
+#no-course-modal .modal-body .paper-btn {
+    background-color: var(--orange);
+    border: 2px solid var(--burnt);
+    color: white;
+}
+
+/* Enhanced No-Course Modal Styling */
+#modal-no-course + .modal {
+  /* Ensure modal background uses palette */
+  --modal-bg-color: var(--green);
+}
+
+.modal-body {
+  border: 3px solid var(--teal);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background-color: #fff;
+  position: relative;
+}
+
+.modal-title {
+  color: var(--mustard);
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-text {
+  color: var(--burnt);
+  margin-bottom: 1rem;
+}
+
+.btn-close {
+  display: block;
+  margin: 1rem auto 0;
+  padding: 0.5rem 1.2rem;
+  background-color: var(--orange);
+  border: 2px solid var(--burnt);
+  color: #fff;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-close:hover {
+  background-color: var(--burnt);
+}
+
+.btn-close:active {
+  transform: translateY(2px);
+}
+
+/* Custom No-Course Modal */
+.custom-modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.custom-modal.active {
+  display: flex;
+}
+.custom-modal-content {
+  background: #fff;
+  border: 3px solid #8C602A;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  max-width: 90%;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.custom-modal-content h4 {
+  color: var(--mustard);
+  margin-bottom: 0.5rem;
+}
+.custom-modal-content p {
+  color: var(--burnt);
+  margin-bottom: 1rem;
+}
+#no-course-close-btn {
+  background-color: #038C7F;
+  border: 2px solid var(--burnt);
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: bold;
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+#no-course-close-btn:hover {
+  background-color: var(--burnt);
+}
+#no-course-close-btn:active {
+  transform: translateY(2px);
+}
+
+/* Updated No-Course Modal Colors */
+/* Modal border: Burnt (#F27405) */
+.custom-modal-content {
+  border: 3px solid #8C602A;
+}
+
+/* Heading text: Teal (#038C7F) */
+.custom-modal-content h4 {
+  color: var(--teal) !important;
+}
+
+/* Body copy: Mustard (#F2A007) */
+.custom-modal-content p {
+  color: var(--mustard) !important;
+}
+
+/* OK button background: Green (#03A678) */
+#no-course-close-btn {
+  background-color: #038C7F;
+}
+
+/* OK button border & text: Orange (#F28B0C) */
+#no-course-close-btn {
+  border: 2px solid var(--orange) !important;
+  color: #ffffff;
+}
+
+
+/* Modal using new palette */
+.custom-modal-content {
+  border: 3px solid #8C602A;
+}
+.custom-modal-content h4 {
+  color: var(--teal);
+}
+.custom-modal-content p {
+  color: var(--sea-green);
+}
+#no-course-close-btn {
+  background-color: #038C7F;
+  border: 2px solid var(--brown);
+  color: #ffffff;
+}
+
+
+/* Override modal border color to sea green (#038C65) */
+.custom-modal-content {
+    border: 3px solid #038C65 !important;
+}
+
+/* Bottom Docked Menu Styling */
+#bottom-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #F2B705;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+.bottom-menu-list {
+  display: flex;
+  justify-content: space-around;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bottom-menu-list li a {
+  color: var(--dark-teal);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Override bottom menu link color to #F27405 */
+#bottom-menu .bottom-menu-list li a {
+    color: #F27405 !important;
+}
+
+/* Updated bottom menu styling */
+#bottom-menu {
+    background-color: #026873 !important;
+}
+#bottom-menu .bottom-menu-list li a {
+    color: #F2B705 !important;
+}
+
+/* Bottom menu toggle switch */
+#bottom-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+#bottom-menu .toggle-switch {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 20px;
+}
+
+#bottom-menu .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+#bottom-menu .toggle-switch label {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+#bottom-menu .toggle-switch .slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 20px;
+  transition: background-color 0.4s;
+}
+
+#bottom-menu .toggle-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.4s;
+}
+
+#lock-toggle:checked + label .slider {
+  background-color: #F2B705;
+}
+
+#lock-toggle:checked + label .slider:before {
+  transform: translateX(20px);
+}
+
+/* Prevent toggle covering menu links by adding right padding */
+#bottom-menu .bottom-menu-list {
+    padding-right: 4rem;
+}
+
+/* Update toggle active (checked) color to #F27405 */
+#lock-toggle:checked + label .slider {
+    background-color: #F27405 !important;
+}
+
+/* Toggle switch color updates */
+/* Inactive (unchecked) track color: F27405 */
+#bottom-menu .toggle-switch .slider {
+    background-color: #F27405 !important;
+}
+
+/* Active (checked) track color: F2B705 */
+#lock-toggle:checked + label .slider {
+    background-color: #F2B705 !important;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+  background-color: #121212 !important;
+  color: #E0E0E0 !important;
+}
+
+/* Invert form elements backgrounds */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode button,
+body.dark-mode .custom-modal-content {
+  background-color: #2C2C2C !important;
+  color: #E0E0E0 !important;
+}
+
+/* Bottom menu dark background */
+body.dark-mode #bottom-menu {
+  background-color: #1F1F1F !important;
+}
+
+/* Modal border and content in dark mode */
+body.dark-mode .custom-modal-content {
+  border-color: #038C65 !important;
+}
+
+/* Links in dark mode */
+body.dark-mode a {
+  color: #F2B705 !important;
+}
+
+/* Lightened Dark Mode Overrides */
+body.dark-mode {
+    /* lightened from #121212 to #2C2C2C */
+    background-color: #2C2C2C !important;
+}
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode button,
+body.dark-mode .custom-modal-content {
+    /* lightened from #2C2C2C to #3F3F3F */
+    background-color: #3F3F3F !important;
+}
+body.dark-mode #bottom-menu {
+    /* lightened from #1F1F1F to #3F3F3F */
+    background-color: #3F3F3F !important;
+}
+
+/* --- Fullscreen Layout: 75% Menu Items, 25% Toggle --- */
+@media (min-width: 768px) {
+  nav#bottom-menu .bottom-menu-list {
+    flex: 0 0 75% !important;
+    justify-content: space-around !important;
+  }
+  nav#bottom-menu .toggle-switch {
+    flex: 0 0 25% !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+  }
+}
+
+/* --- Light Mode Menu Items Color Update --- */
+body:not(.dark-mode) nav#bottom-menu a {
+  color: #F27405 !important;
+}
+
+/* --- Revert Light Mode Menu Items Color --- */
+body:not(.dark-mode) nav#bottom-menu a {
+  color: #F2B705 !important; /* original light mode menu color */
+}
+
+/* --- Dark Mode: Force button and dropdown borders to #F27405 for Papercss --- */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .btn--big,
+body.dark-mode .paper-btn,
+body.dark-mode select {
+  border: 2px solid #F27405 !important;
+}
+
+/* Also ensure dropdown arrow border */
+body.dark-mode select {
+  background-clip: padding-box !important;
+}
+
+/* MAXIMUM SPECIFICITY for dark mode borders */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .btn--big,
+body.dark-mode .paper-btn,
+body.dark-mode select,
+body.dark-mode select.paper-select,
+body.dark-mode .paper-select,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"] {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Try pseudo-element for select (for arrow) */
+body.dark-mode select::-ms-expand {
+  border-color: #F27405 !important;
+}
+body.dark-mode select:focus {
+  border-color: #F27405 !important;
+}
+
+/* MAX FORCE: Papercss and all button/selects in dark mode */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .btn--big,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .paper-btn,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"] {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: 2px solid #F27405 !important; /* for debugging */
+  background-clip: padding-box !important;
+}
+
+body.dark-mode select,
+body.dark-mode select.paper-select,
+body.dark-mode .paper-select {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: 2px solid #F27405 !important; /* for debugging */
+  background-clip: padding-box !important;
+}
+
+body.dark-mode select:focus,
+body.dark-mode .paper-select:focus {
+  border: 2px solid #F27405 !important;
+  outline: 2px solid #F27405 !important;
+}
+
+/* For some Papercss versions, border is rendered by a pseudo-element: */
+body.dark-mode button::after,
+body.dark-mode .btn::after,
+body.dark-mode .btn--big::after,
+body.dark-mode .btn-primary::after,
+body-dark-mode .paper-btn::after,
+body.dark-mode select::after,
+body.dark-mode .paper-select::after {
+  border-color: #F27405 !important;
+}
+
+/* Remove other shadows for good measure */
+body.dark-mode button,
+body.dark-mode select {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* FINAL: Only orange border for buttons and selects in dark mode */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .btn--big,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .paper-btn,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"] {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+body.dark-mode select,
+body.dark-mode select.paper-select,
+body.dark-mode .paper-select {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+body.dark-mode select:focus,
+body.dark-mode .paper-select:focus {
+  border: 2px solid #F27405 !important;
+  outline: none !important;
+}
+
+/* For Papercss border pseudo-elements */
+body.dark-mode button::after,
+body.dark-mode .btn::after,
+body.dark-mode .btn--big::after,
+body.dark-mode .btn-primary::after,
+body.dark-mode .paper-btn::after,
+body.dark-mode select::after,
+body.dark-mode .paper-select::after {
+  border-color: #F27405 !important;
+}
+
+/* Remove any other shadows */
+body.dark-mode button,
+body.dark-mode select {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Nuke all green and colored box-shadows on buttons/selects in dark mode */
+body.dark-mode button,
+body.dark-mode button:focus,
+body.dark-mode button:active,
+body.dark-mode .btn,
+body.dark-mode .btn:focus,
+body.dark-mode .btn:active,
+body.dark-mode .btn--big,
+body.dark-mode .btn--big:focus,
+body.dark-mode .btn--big:active,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-primary:focus,
+body.dark-mode .btn-primary:active,
+body.dark-mode .paper-btn,
+body.dark-mode .paper-btn:focus,
+body.dark-mode .paper-btn:active,
+body.dark-mode select,
+body.dark-mode select:focus,
+body.dark-mode select:active,
+body.dark-mode .paper-select,
+body.dark-mode .paper-select:focus,
+body.dark-mode .paper-select:active,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="button"]:focus,
+body.dark-mode input[type="button"]:active,
+body.dark-mode input[type="submit"],
+body.dark-mode input[type="submit"]:focus,
+body.dark-mode input[type="submit"]:active {
+  box-shadow: none !important;
+  border: 2px solid #F27405 !important;
+  outline: none !important;
+}
+
+/* Nuke Papercss green shadow and force orange border in dark mode */
+body.dark-mode .btn:focus,
+body.dark-mode .btn--big:focus,
+body.dark-mode .btn--purple-blue:focus,
+body.dark-mode .paper-btn:focus,
+body.dark-mode button:focus {
+  box-shadow: none !important;
+  border: 2px solid #F27405 !important;
+  outline: none !important;
+}
+body.dark-mode .btn,
+body.dark-mode .btn--big,
+body.dark-mode .btn--purple-blue,
+body.dark-mode .paper-btn,
+body.dark-mode button {
+  border: 2px solid #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* FULL BORDER COLOR NUKE: Overwrite all sides to orange in dark mode */
+body.dark-mode button,
+body.dark-mode .btn,
+body.dark-mode .btn--big,
+body.dark-mode .btn-primary,
+body.dark-mode .btn-secondary,
+body.dark-mode .btn--purple-blue,
+body.dark-mode .paper-btn,
+body.dark-mode input[type="button"],
+body.dark-mode input[type="submit"],
+body.dark-mode select,
+body.dark-mode .paper-select {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+body.dark-mode button:focus,
+body.dark-mode .btn:focus,
+body.dark-mode .btn--big:focus,
+body.dark-mode .btn-primary:focus,
+body.dark-mode .btn-secondary:focus,
+body.dark-mode .btn--purple-blue:focus,
+body.dark-mode .paper-btn:focus,
+body.dark-mode input[type="button"]:focus,
+body.dark-mode input[type="submit"]:focus,
+body.dark-mode select:focus,
+body.dark-mode .paper-select:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+body.dark-mode .btn--purple-blue,
+body.dark-mode .btn--purple-blue:focus,
+body.dark-mode .btn--big,
+body.dark-mode .btn--big:focus,
+body.dark-mode .btn,
+body.dark-mode .btn:focus,
+body.dark-mode .paper-btn,
+body.dark-mode .paper-btn:focus,
+body.dark-mode button,
+body.dark-mode button:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  --btn-border-color: #F27405 !important;
+  --border-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Also select element if you want drop down menu orange */
+body.dark-mode select,
+body.dark-mode select:focus,
+body.dark-mode .paper-select,
+body.dark-mode .paper-select:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  --btn-border-color: #F27405 !important;
+  --border-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* FINAL: Ultra-specific dark mode orange border fix */
+body.dark-mode #select-course-btn,
+body.dark-mode #select-course-btn:focus,
+body.dark-mode #new-course-btn,
+body.dark-mode #new-course-btn:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+/* Also for select dropdowns */
+body.dark-mode select,
+body.dark-mode select:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* FINAL: Ultra-specific dark mode orange border fix for all target elements */
+body.dark-mode #select-course-btn,
+body.dark-mode #select-course-btn:focus,
+body.dark-mode #new-course-btn,
+body.dark-mode #new-course-btn:focus,
+body.dark-mode #delete-course-btn,
+body.dark-mode #delete-course-btn:focus,
+body.dark-mode #clear-name-btn,
+body.dark-mode #clear-name-btn:focus,
+body.dark-mode #course-select,
+body.dark-mode #course-select:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+body.dark-mode #course-select,
+body.dark-mode #course-select:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+/* ABSOLUTE FINAL: Overwrite all select states and pseudo-elements for #course-select */
+body.dark-mode #course-select,
+body.dark-mode #course-select:focus,
+body.dark-mode #course-select:active,
+body.dark-mode #course-select:focus-visible,
+body.dark-mode select,
+body.dark-mode select:focus,
+body.dark-mode select:active,
+body.dark-mode select:focus-visible {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+/* WebKit pseudo-elements for selects */
+body.dark-mode #course-select::-webkit-input-placeholder,
+body.dark-mode #course-select::-webkit-inner-spin-button,
+body.dark-mode #course-select::-webkit-outer-spin-button {
+  border-color: #F27405 !important;
+}
+/* Firefox focus ring for select */
+body.dark-mode #course-select:-moz-focusring {
+  border-color: #F27405 !important;
+}
+
+/* TEAL BORDER: Light mode only */
+body:not(.dark-mode) button,
+body:not(.dark-mode) .btn,
+body:not(.dark-mode) .btn-primary,
+body:not(.dark-mode) .btn-block,
+body:not(.dark-mode) .btn--purple-blue {
+    border: 2px solid #038C7F !important;
+}
+
+body:not(.dark-mode) #controls-section select#course-select {
+    border: 2px solid #038C7F !important;
+}
+
+/* ORANGE BORDER: Dark mode only (keep this at the very end!) */
+body.dark-mode #course-select,
+body.dark-mode #course-select:focus,
+body.dark-mode #delete-course-btn,
+body.dark-mode #delete-course-btn:focus,
+body.dark-mode #clear-name-btn,
+body.dark-mode #clear-name-btn:focus,
+body.dark-mode #select-course-btn,
+body.dark-mode #select-course-btn:focus,
+body.dark-mode #new-course-btn,
+body.dark-mode #new-course-btn:focus {
+  border: 2px solid #F27405 !important;
+  border-top-color: #F27405 !important;
+  border-right-color: #F27405 !important;
+  border-bottom-color: #F27405 !important;
+  border-left-color: #F27405 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-clip: padding-box !important;
+}
+
+/* Consistent control widths and layout for controls section */
+#controls-section select#course-select,
+#controls-section button,
+#controls-section .btn {
+  width: 100%;
+  min-width: 220px;
+  box-sizing: border-box;
+  margin-bottom: 0.5rem;
+}
+
+#controls-section .button-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+#controls-section .button-row button,
+#controls-section .button-row .btn {
+  flex: 1 1 0px;
+  width: auto;
+  min-width: 120px;
+  margin-bottom: 0;
+}
+
+#controls-section {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1rem 0;
+}
+
+#controls-section select#course-select,
+#controls-section button,
+#controls-section .btn {
+  width: 100%;
+  min-width: 220px;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+#controls-section .button-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+#controls-section .button-row button,
+#controls-section .button-row .btn {
+  flex: 1 1 0px;
+  width: auto;
+  min-width: 120px;
+  margin-bottom: 0;
+}
+
+#controls-section {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+body.dark-mode .custom-modal-content h4 {
+  background: #F27405 !important;
+  color: #fff !important;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4em;
+  margin-bottom: 1rem;
+}
+
+body.dark-mode .custom-modal-content .paper-btn,
+body.dark-mode .custom-modal-content button {
+  background: #F27405 !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .custom-modal-content h4 {
+  background: #232323 !important;   /* dark bg */
+  color: #F27405 !important;
+  font-weight: bold !important;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4em;
+  margin-bottom: 1rem;
+}
+
+body.dark-mode .custom-modal-content .paper-btn,
+body.dark-mode .custom-modal-content button {
+  background: #F27405 !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body.dark-mode .custom-modal-content h4 {
+  background: #383838 !important;   /* matches popup bg */
+  color: #F27405 !important;
+  font-weight: bold !important;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4em;
+  margin-bottom: 1rem;
+}
+
+body.dark-mode .custom-modal-content h4 {
+  background: none !important;
+  color: #F27405 !important;
+  font-weight: bold !important;
+  padding: 0.5rem 1rem;
+  border-radius: 0.4em;
+  margin-bottom: 1rem;
+}
+
+body.dark-mode .custom-modal-content {
+  border: 2.5px solid #F2B705 !important;
+  border-radius: 0.6em;
+}
+
+body:not(.dark-mode) .custom-modal-content h4 {
+  color: #026873 !important;
+  font-weight: bold !important;
+  background: none !important;
+}
+
+body:not(.dark-mode) .custom-modal-content .paper-btn,
+body:not(.dark-mode) .custom-modal-content button {
+  background: #026873 !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Welcome Modal Styling */
+#welcome-modal .custom-modal-content {
+  border: 3px solid var(--teal);
+}
+body.dark-mode #welcome-modal .custom-modal-content {
+  border-color: var(--dark-teal);
+}
+#welcome-modal .custom-modal-content h4 {
+  background-color: var(--teal);
+  color: white;
+  padding: 0.5rem;
+  margin: 0;
+}
+body.dark-mode #welcome-modal .custom-modal-content h4 {
+  background-color: var(--dark-teal);
+}
+#welcome-modal .custom-modal-content p {
+  margin: 1rem 0;
+}
+#welcome-modal #name-input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--teal);
+  border-radius: 0.25rem;
+}
+body.dark-mode #welcome-modal #name-input {
+  border-color: var(--dark-teal);
+  background-color: #333;
+  color: #fff;
+}
+#welcome-modal #save-name-btn {
+  background-color: var(--teal);
+  color: white;
+  width: 100%;
+}
+body.dark-mode #welcome-modal #save-name-btn {
+  background-color: var(--dark-teal);
+}
+
+/* Welcome message styling */
+#welcome-message {
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Dark mode: welcome message font color matches bottom menu yellow */
+body.dark-mode #welcome-message {
+  color: var(--mustard-yellow);
+}
+
+/* Dark mode override for welcome message color */
+body.dark-mode #welcome-message {
+  color: #F2B705 !important;
+}
+
+/* Clear Name Modal Styling */
+#clear-name-modal .custom-modal-content {
+  border: 3px solid var(--teal);
+}
+body.dark-mode #clear-name-modal .custom-modal-content {
+  border-color: var(--dark-teal);
+}
+#clear-name-modal .custom-modal-content h4 {
+  background-color: var(--teal);
+  color: white;
+  padding: 0.5rem;
+  margin: 0;
+}
+body.dark-mode #clear-name-modal .custom-modal-content h4 {
+  background-color: var(--dark-teal);
+}
+#clear-name-modal .custom-modal-content p {
+  margin: 1rem 0;
+}
+#clear-name-modal .custom-modal-content .paper-btn {
+  margin: 0.5rem 0.25rem;
+}
+
+/* Dark mode: welcome prompt input border matches bottom menu mustard yellow */
+body.dark-mode #welcome-modal #name-input {
+  border-color: #F2B705 !important;
+}
+
+
+/* Modal theme styles */
+.light-modal .modal-content {
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #F2B705;
+}
+.dark-modal .modal-content {
+    background-color: #222222;
+    color: #ffffff;
+    border: 2px solid #F2B705;
+}
+
+/* Modal overlay and modal basic styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.modal-content {
+    padding: 16px;
+    max-width: 400px;
+    width: 90%;
+}
+.modal-header {
+    margin: 0 0 8px;
+}
+.modal-body {
+    margin-bottom: 16px;
+}
+.modal-footer {
+    text-align: right;
+}
+.modal-ok-button {
+    padding: 8px 16px;
+    border: none;
+    cursor: pointer;
+}
+/* Theme overrides appended earlier */
+
+/* FlightLog Modal Styles */
+.flightlog-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.flightlog-modal {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+.flightlog-modal-content {
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #F2B705;
+    border-radius: 8px;
+    padding: 16px;
+    max-width: 400px;
+    width: 90%;
+}
+.flightlog-modal-content.dark-modal {
+    background-color: #222222;
+    color: #ffffff;
+}
