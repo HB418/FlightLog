@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=5"/>
+  <link rel="stylesheet" href="css/styles.css?v=10"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -28,7 +28,7 @@
   <!-- Header -->
   <header class="row">
     <div class="col">
-      <img id="header-image" src="img/flightLogHeader.png" alt="Flight Log" style="max-width:100%;height:auto;"/>
+      <img id="header-image" src="img/flightLogHeader.png" alt="Flight Log"/>
       <div id="header-map" class="hide"></div>
     </div>
   </header>
@@ -43,26 +43,47 @@
     </div>
   </div>
 
-  <!-- New Course Modal -->
+  <!-- New Course Modal (multi-screen wizard) -->
   <div id="new-course-modal" class="custom-modal">
     <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
-      <h4>New Course</h4>
-      <label for="new-course-name">Course Name</label>
-      <input type="text" id="new-course-name" placeholder="Course name" style="width:100%;margin-bottom:0.75rem;"/>
-      <button id="find-course-location-btn" type="button" class="paper-btn" style="margin-bottom:0.75rem;">Enter Course Location</button>
-      <div id="course-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.5rem;"></div>
 
-      <label for="new-course-hole-count">Number of Holes</label>
-      <input type="number" id="new-course-hole-count" min="1" max="36" value="18" style="width:100%;margin-bottom:0.75rem;"/>
+      <!-- Screen 1: Course Info -->
+      <div id="nc-screen-info">
+        <h4 style="text-align:center;">New Course</h4>
+        <label for="nc-course-name">Course Name</label>
+        <input type="text" id="nc-course-name" placeholder="Course name" style="width:100%;margin-bottom:0.75rem;"/>
 
-      <button id="generate-hole-fields-btn" class="paper-btn">Set Up Holes</button>
+        <label for="nc-hole-count">Number of Holes</label>
+        <select id="nc-hole-count" style="width:100%;margin-bottom:0.75rem;"></select>
 
-      <div id="new-course-holes-container" style="max-height:40vh;overflow-y:auto;margin-top:0.75rem;"></div>
-
-      <div style="margin-top:1rem;text-align:center;">
-        <button id="save-new-course-btn" class="paper-btn">Save Course</button>
-        <button id="cancel-new-course-btn" class="paper-btn">Cancel</button>
+        <div style="text-align:center;margin-top:1rem;">
+          <button id="nc-info-next-btn" class="paper-btn">Next</button>
+          <button id="nc-info-cancel-btn" class="paper-btn">Cancel</button>
+        </div>
       </div>
+
+      <!-- Screen 2: Hole Setup -->
+      <div id="nc-screen-holes" class="hide">
+        <h4 style="text-align:center;">Hole Details</h4>
+        <div id="nc-holes-container" style="max-height:50vh;overflow-y:auto;"></div>
+        <div style="text-align:center;margin-top:1rem;">
+          <button id="nc-holes-back-btn" class="paper-btn">Back</button>
+          <button id="nc-holes-next-btn" class="paper-btn">Next</button>
+        </div>
+      </div>
+
+      <!-- Screen 3: Map setup prompt -->
+      <div id="nc-screen-map-prompt" class="hide">
+        <h4 style="text-align:center;">Course Map</h4>
+        <p style="font-size:0.9rem;">Would you like to set up the course map now (tee pads, baskets, and paths for each hole)?</p>
+        <div id="nc-map-prompt-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.5rem;"></div>
+        <div style="text-align:center;margin-top:1rem;">
+          <button id="nc-map-yes-btn" class="paper-btn">Yes</button>
+          <button id="nc-map-skip-btn" class="paper-btn">Skip</button>
+          <button id="nc-map-back-btn" class="paper-btn">Back</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -70,26 +91,13 @@
   <div id="enter-location-modal" class="custom-modal">
     <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
       <h4>Enter Course Location</h4>
-      <p style="font-size:0.85rem;">Enter the course's street address, or the nearest town/park name if you don't know the exact address.</p>
+      <p style="font-size:0.85rem;">We couldn't find this course by name. Enter its street address, or the nearest town/park name if you don't know the exact address.</p>
       <label for="course-address-input">Address or place name</label>
       <input type="text" id="course-address-input" placeholder="e.g. 123 Main St, Springfield" style="width:100%;margin-bottom:0.75rem;"/>
       <div id="enter-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.5rem;"></div>
       <div style="text-align:center;">
         <button id="search-course-address-btn" class="paper-btn">Search</button>
         <button id="cancel-course-address-btn" class="paper-btn">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Course Location Confirmation Modal -->
-  <div id="course-location-modal" class="custom-modal">
-    <div class="custom-modal-content" style="max-width:480px;width:95%;">
-      <h4>Confirm Course Location</h4>
-      <p id="course-location-message" style="font-size:0.9rem;"></p>
-      <div id="course-location-map" style="width:100%;height:220px;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
-      <div style="text-align:center;">
-        <button id="course-location-yes-btn" class="paper-btn">Yes, that's it</button>
-        <button id="course-location-no-btn" class="paper-btn">Not correct</button>
       </div>
     </div>
   </div>
@@ -175,6 +183,70 @@
     </div>
   </div>
 
+  <!-- Hole Placement Wizard Modal -->
+  <div id="hole-placement-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:95vw;width:95vw;text-align:left;">
+      <p id="hole-placement-instructions" style="font-size:0.9rem;text-align:center;min-height:2.6rem;margin-bottom:0.5rem;"></p>
+
+      <div id="hole-placement-map" style="width:100%;height:65vh;border-radius:0.4rem;margin-bottom:0.5rem;"></div>
+
+      <div id="hole-placement-rotation-row" class="hide" style="margin-bottom:0.75rem;">
+        <label for="hole-placement-rotation" style="font-size:0.8rem;">Tee facing direction</label>
+        <input type="range" id="hole-placement-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
+      </div>
+
+      <div style="text-align:center;">
+        <button id="hole-placement-reuse-basket-btn" type="button" class="paper-btn hide">Use Existing Basket</button>
+        <button id="hole-placement-confirm-btn" type="button" class="paper-btn hide">Confirm</button>
+        <button id="hole-placement-remove-point-btn" type="button" class="paper-btn hide">Remove</button>
+        <button id="hole-placement-done-waypoints-btn" type="button" class="paper-btn hide">No More Waypoints</button>
+        <button id="hole-placement-previous-hole-btn" type="button" class="paper-btn hide">Previous Hole</button>
+        <button id="hole-placement-finish-btn" type="button" class="paper-btn hide">Finish</button>
+        <button id="hole-placement-cancel-btn" type="button" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reuse Existing Basket Modal -->
+  <div id="reuse-basket-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:360px;width:90%;text-align:left;">
+      <h4>Reuse Existing Basket</h4>
+      <label for="reuse-basket-select">Use the basket from:</label>
+      <select id="reuse-basket-select" style="width:100%;margin-bottom:0.75rem;"></select>
+      <div style="text-align:center;">
+        <button id="reuse-basket-use-btn" class="paper-btn">Use This Basket</button>
+        <button id="reuse-basket-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Finish Review Modal -->
+  <div id="finish-review-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
+      <h4>Review Before Saving</h4>
+      <p style="font-size:0.85rem;">Hole lengths and the tee/basket map positions may not exactly agree. What would you like to do?</p>
+      <div style="text-align:center;">
+        <button id="finish-match-lengths-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Match Hole Lengths to Map</button>
+        <button id="finish-match-map-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Match Map to Hole Lengths</button>
+        <button id="finish-keep-as-is-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Keep As Is</button>
+        <button id="finish-review-back-btn" class="paper-btn" style="width:100%;">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Visibility Modal -->
+  <div id="save-visibility-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:400px;width:90%;text-align:left;">
+      <h4>Save Course</h4>
+      <p style="font-size:0.85rem;">Would you like to keep this course private, or make it public?</p>
+      <div style="text-align:center;">
+        <button id="save-visibility-private-btn" class="paper-btn">Keep Private</button>
+        <button id="save-visibility-public-btn" class="paper-btn">Make Public</button>
+        <button id="save-visibility-back-btn" class="paper-btn">Back</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Controls -->
 
 <section id="controls-section" class="row">
@@ -224,10 +296,10 @@
 
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/modals.js"></script>
+  <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
   <script src="js/db.js"></script>
-  <script src="js/main.js?v=7"></script>
+  <script src="js/main.js?v=21"></script>
   <script src="js/namePrompt.js"></script>
 
 

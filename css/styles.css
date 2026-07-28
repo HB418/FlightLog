@@ -16,9 +16,14 @@
 
 #header-map {
   width: 100%;
-  height: 200px;
+  height: 320px;
   border-radius: 0.4rem;
   z-index: 0;
+}
+
+#header-image {
+  max-width: 100%;
+  height: auto;
 }
 
 /* PaperCSS applies a hand-drawn "paper" style to every <img> on the page
@@ -33,6 +38,31 @@
   max-width: none !important;
   max-height: none !important;
   box-shadow: none !important;
+}
+
+/* Yellow hole-number label shown next to tee/basket markers during
+   course setup. Leaflet's default tooltip is a white box with an
+   arrow — strip that so only the bold yellow number remains. */
+.hole-number-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--mustard);
+  font-weight: bold;
+  font-size: 0.95rem;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  padding: 0 !important;
+}
+.hole-number-label::before {
+  display: none !important;
+}
+
+/* Leaflet's default divIcon adds a white box + border, meant for text
+   labels — strip it so our tee/basket/waypoint div-icons show through
+   with just their own artwork/shape. */
+.placement-div-icon {
+  background: transparent !important;
+  border: none !important;
 }
 html {
   width: 100%;
@@ -705,6 +735,32 @@ body.dark-mode #bottom-menu {
   }
   #bottom-menu .bottom-menu-list {
     flex: 0 1 500px;
+  }
+}
+
+/* Desktop: center the header image/map instead of letting it stretch
+   full-width edge to edge. .row is a flexbox container (PaperCSS) and
+   .col shrinks to fit its content above 768px, so centering has to
+   happen on the row itself via justify-content, not on the image. */
+@media (min-width: 768px) {
+  header.row {
+    justify-content: center;
+  }
+  /* PaperCSS's .col only gets an explicit width below 768px (flex:0 0 100%
+     in its own stylesheet); above that it's flex:0 1 auto (shrink-to-fit).
+     #header-map's own width:100% then has no defined parent width to
+     resolve against and collapses to ~0 — invisible, but only above this
+     breakpoint. Giving the column itself a concrete width fixes it for
+     both the image and the map. */
+  header.row .col {
+    flex: 0 0 auto;
+    width: 500px;
+  }
+  #header-image {
+    max-width: 500px;
+  }
+  #header-map {
+    max-width: 500px;
   }
 }
 

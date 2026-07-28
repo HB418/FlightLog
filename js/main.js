@@ -9,35 +9,49 @@ let mapZoomMap = null;
 let mapZoomMarker = null;
 let pendingCourseLat = null;
 let pendingCourseLng = null;
-let pendingCourseLocationConfirmed = false;
-let courseLocationMap = null;
-let courseLocationMapMarker = null;
 
 // Tee pad marker icon — a real illustrated asset (img/tee-pad.png), not a
 // pin, so it's anchored at its own center rather than a bottom point.
 // Native art is 242x481px; displayed small on the map.
-const TEE_PAD_ICON = (typeof L !== 'undefined') ? L.icon({
-  iconUrl: 'img/tee-pad.png',
-  iconSize: [22, 44],
-  iconAnchor: [11, 22]
-}) : null;
+const TEE_PAD_ICON_URL = 'img/tee-pad.png';
 
 // Basket marker icon — anchored at the bottom-center of the pole, since
 // this marker should point at one exact ground spot (unlike the tee pad,
 // which represents an area and is anchored at its own center).
-const BASKET_ICON = (typeof L !== 'undefined') ? L.icon({
-  iconUrl: 'img/basket.png',
-  iconSize: [28, 40],
-  iconAnchor: [14, 40]
-}) : null;
+// Uses a divIcon (not L.icon) with object-fit:contain so the real image's
+// aspect ratio is preserved instead of being stretched to fill iconSize.
+const BASKET_ICON_URL = 'img/basket.png';
+function makeBasketIcon() {
+  return L.divIcon({
+    html: '<img src="' + BASKET_ICON_URL + '" style="width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;"/>',
+    className: 'placement-div-icon',
+    iconSize: [66, 88],
+    iconAnchor: [33, 88]
+  });
+}
 
+// Hole placement wizard state
+let holePlacementHoles = [];          // [{number, par}] read from the New Course hole-setup screen
+let holePlacementIndex = 0;           // which hole (0-based) we're currently placing
+let holePlacementSubStep = 'tee-tap'; // 'tee-tap' | 'tee-confirm' | 'basket-tap' | 'basket-confirm' | 'waypoint-tap' | 'waypoint-confirm' | 'done'
+let holePlacementMap = null;
+let holePlacementTeeMarker = null;
+let holePlacementBasketMarker = null;
+let holePlacementCurrentWaypointMarker = null;
+let holePlacementWaypointMarkers = [];  // confirmed waypoints for the CURRENT hole
+let holePlacementRotation = 0;
+let pendingHoleGeo = [];               // [{tee:{lat,lng,rotation}, basket:{lat,lng}, waypoints:[{lat,lng}]}] — one entry per hole
+let allBasketMarkers = [];             // [{holeNumbers:[n,...], marker, lat, lng}] — every confirmed basket this session, for reuse + labeling
+let holeMarkersHistory = [];           // [{teeMarker, basketEntry, waypointMarkers}] — one entry per hole, so "Previous Hole" can clean up
+let pendingCourseVisibility = 'private';
 
 document.addEventListener('DOMContentLoaded', function () {
   loadCourseOptions();
 
   document.getElementById('select-course-btn')?.addEventListener('click', async () => {
     const select = document.getElementById('course-select');
-    if (!select || !select.value) { showSelectCourseEmptyModal(); return; }
+    if (!select || select.options.length <= 1) { showSelectCourseEmptyModal(); return; }
+    if (!select.value) { document.getElementById('no-course-modal').classList.add('active'); return; }
     const db = await openDiscTallyDB();
     const course = await getCourseById(db, Number(select.value));
     if (!course) { showGenericModal('Course not found.'); return; }
@@ -46,38 +60,95 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('delete-course-btn')?.addEventListener('click', async () => {
     const select = document.getElementById('course-select');
-    if (!select || !select.value) { showSelectCourseEmptyModal(); return; }
-    const db = await openDiscTallyDB();
-    await deleteCourse(db, Number(select.value));
-    await loadCourseOptions();
+    if (!select || select.options.length <= 1) { showDeleteCourseEmptyModal(); return; }
+    if (!select.value) { document.getElementById('no-course-modal').classList.add('active'); return; }
+    const courseId = Number(select.value);
+    const courseName = select.options[select.selectedIndex].textContent;
+    showConfirmModal(
+      'Deleting "' + courseName + '" will remove its tee/basket map data, and it will no longer be selectable for stats or new rounds. This cannot be undone. Continue?',
+      async () => {
+        const db = await openDiscTallyDB();
+        await deleteCourse(db, courseId);
+        await loadCourseOptions();
+      }
+    );
   });
 
   document.getElementById('new-course-btn')?.addEventListener('click', openNewCourseModal);
-  document.getElementById('cancel-new-course-btn')?.addEventListener('click', closeNewCourseModal);
-  document.getElementById('generate-hole-fields-btn')?.addEventListener('click', generateHoleFields);
-  document.getElementById('save-new-course-btn')?.addEventListener('click', saveNewCourse);
 
-  document.getElementById('find-course-location-btn')?.addEventListener('click', openEnterLocationModal);
+  // Screen 1: Course Info
+  document.getElementById('nc-info-cancel-btn')?.addEventListener('click', closeNewCourseModal);
+  document.getElementById('nc-info-next-btn')?.addEventListener('click', handleNcInfoNext);
+
+  // Screen 2: Hole Setup
+  document.getElementById('nc-holes-back-btn')?.addEventListener('click', () => showNCScreen('nc-screen-info'));
+  document.getElementById('nc-holes-next-btn')?.addEventListener('click', () => showNCScreen('nc-screen-map-prompt'));
+
+  // Screen 3: Map setup prompt
+  document.getElementById('nc-map-back-btn')?.addEventListener('click', () => showNCScreen('nc-screen-holes'));
+  document.getElementById('nc-map-yes-btn')?.addEventListener('click', handleNcMapYes);
+  document.getElementById('nc-map-skip-btn')?.addEventListener('click', () => {
+    showConfirmModal(
+      "Skipping means you won't be able to set up the course map later. Save this course without a map?",
+      finishCourseCreation
+    );
+  });
+
+  // Address entry (used only when auto-detect-by-name fails)
   document.getElementById('cancel-course-address-btn')?.addEventListener('click', () => {
     document.getElementById('enter-location-modal').classList.remove('active');
     document.getElementById('new-course-modal').classList.add('active');
+    showNCScreen('nc-screen-map-prompt');
   });
   document.getElementById('search-course-address-btn')?.addEventListener('click', handleCourseAddressSearch);
-  document.getElementById('course-location-yes-btn')?.addEventListener('click', () => {
-    pendingCourseLocationConfirmed = true;
-    document.getElementById('course-location-modal').classList.remove('active');
-    document.getElementById('new-course-modal').classList.add('active');
-    const statusEl = document.getElementById('course-location-status');
-    if (statusEl) statusEl.textContent = 'Location confirmed for this course.';
+
+  // Hole placement wizard
+  document.getElementById('hole-placement-confirm-btn')?.addEventListener('click', handleHolePlacementConfirm);
+  document.getElementById('hole-placement-remove-point-btn')?.addEventListener('click', handleRemoveCurrentWaypoint);
+  document.getElementById('hole-placement-done-waypoints-btn')?.addEventListener('click', handleDoneWithWaypoints);
+  document.getElementById('hole-placement-previous-hole-btn')?.addEventListener('click', goToPreviousHole);
+  document.getElementById('hole-placement-reuse-basket-btn')?.addEventListener('click', openReuseBasketModal);
+  document.getElementById('hole-placement-finish-btn')?.addEventListener('click', () => {
+    document.getElementById('finish-review-modal').classList.add('active');
   });
-  document.getElementById('course-location-no-btn')?.addEventListener('click', () => {
-    pendingCourseLat = null;
-    pendingCourseLng = null;
-    pendingCourseLocationConfirmed = false;
-    document.getElementById('course-location-modal').classList.remove('active');
-    document.getElementById('new-course-modal').classList.add('active');
-    const statusEl = document.getElementById('course-location-status');
-    if (statusEl) statusEl.textContent = 'No location saved. Try a more specific course name and search again.';
+  document.getElementById('hole-placement-cancel-btn')?.addEventListener('click', cancelHolePlacementWizard);
+  document.getElementById('hole-placement-rotation')?.addEventListener('input', handleTeeRotationInput);
+
+  document.getElementById('reuse-basket-use-btn')?.addEventListener('click', useReuseBasketSelection);
+  document.getElementById('reuse-basket-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('reuse-basket-modal').classList.remove('active');
+  });
+
+  document.getElementById('finish-match-lengths-btn')?.addEventListener('click', () => {
+    applyLengthsFromMap();
+    document.getElementById('finish-review-modal').classList.remove('active');
+    promptSaveOrBack();
+  });
+  document.getElementById('finish-match-map-btn')?.addEventListener('click', () => {
+    applyMapFromLengths();
+    document.getElementById('finish-review-modal').classList.remove('active');
+    promptSaveOrBack();
+  });
+  document.getElementById('finish-keep-as-is-btn')?.addEventListener('click', () => {
+    document.getElementById('finish-review-modal').classList.remove('active');
+    promptSaveOrBack();
+  });
+  document.getElementById('finish-review-back-btn')?.addEventListener('click', () => {
+    document.getElementById('finish-review-modal').classList.remove('active');
+  });
+
+  document.getElementById('save-visibility-private-btn')?.addEventListener('click', () => {
+    pendingCourseVisibility = 'private';
+    document.getElementById('save-visibility-modal').classList.remove('active');
+    finishCourseCreation();
+  });
+  document.getElementById('save-visibility-public-btn')?.addEventListener('click', () => {
+    pendingCourseVisibility = 'public';
+    document.getElementById('save-visibility-modal').classList.remove('active');
+    finishCourseCreation();
+  });
+  document.getElementById('save-visibility-back-btn')?.addEventListener('click', () => {
+    document.getElementById('save-visibility-modal').classList.remove('active');
   });
 
   document.getElementById('back-to-menu-btn')?.addEventListener('click', exitRound);
@@ -130,6 +201,10 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('view-last-round-link')?.addEventListener('click', (e) => {
     e.preventDefault();
     if (currentRound) openLastRoundModal(currentRound.courseId);
+  });
+
+  document.getElementById('no-course-close-btn')?.addEventListener('click', () => {
+    document.getElementById('no-course-modal').classList.remove('active');
   });
 
   document.getElementById('confirm-yes-btn')?.addEventListener('click', () => {
@@ -206,17 +281,33 @@ function enableSelectCourse() {
   if (deleteBtn) deleteBtn.disabled = false;
 }
 
-/* ---------- New Course modal ---------- */
+/* ---------- New Course modal (3-screen wizard) ---------- */
+
+function showNCScreen(id) {
+  ['nc-screen-info', 'nc-screen-holes', 'nc-screen-map-prompt'].forEach(sid => {
+    document.getElementById(sid).classList.toggle('hide', sid !== id);
+  });
+}
 
 function openNewCourseModal() {
-  document.getElementById('new-course-name').value = '';
-  document.getElementById('new-course-hole-count').value = 18;
-  document.getElementById('new-course-holes-container').innerHTML = '';
-  document.getElementById('course-location-status').textContent = '';
+  document.getElementById('nc-course-name').value = '';
+
+  const holeCountSelect = document.getElementById('nc-hole-count');
+  holeCountSelect.innerHTML = '';
+  for (let i = 1; i <= 36; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    if (i === 18) opt.selected = true;
+    holeCountSelect.appendChild(opt);
+  }
+
+  document.getElementById('nc-holes-container').innerHTML = '';
+  document.getElementById('nc-map-prompt-status').textContent = '';
   document.getElementById('course-address-input').value = '';
-  pendingCourseLat = null;
-  pendingCourseLng = null;
-  pendingCourseLocationConfirmed = false;
+
+  resetCourseCreationState();
+  showNCScreen('nc-screen-info');
   document.getElementById('new-course-modal').classList.add('active');
 }
 
@@ -224,126 +315,524 @@ function closeNewCourseModal() {
   document.getElementById('new-course-modal').classList.remove('active');
 }
 
-function openEnterLocationModal() {
-  document.getElementById('new-course-modal').classList.remove('active');
-  document.getElementById('enter-location-modal').classList.add('active');
-  const addressInput = document.getElementById('course-address-input');
-  const statusEl = document.getElementById('enter-location-status');
-  if (statusEl) statusEl.textContent = '';
-  if (addressInput) addressInput.focus();
-}
+function resetCourseCreationState() {
+  pendingCourseLat = null;
+  pendingCourseLng = null;
+  pendingHoleGeo = [];
+  holePlacementHoles = [];
+  holePlacementIndex = 0;
+  holePlacementWaypointMarkers = [];
+  holePlacementCurrentWaypointMarker = null;
+  holePlacementTeeMarker = null;
+  holePlacementBasketMarker = null;
+  allBasketMarkers = [];
+  holeMarkersHistory = [];
+  pendingCourseVisibility = 'private';
 
-async function handleCourseAddressSearch() {
-  const addressInput = document.getElementById('course-address-input');
-  const nameInput = document.getElementById('new-course-name');
-  const statusEl = document.getElementById('enter-location-status');
-
-  const address = addressInput.value.trim();
-  const courseName = nameInput.value.trim();
-  const query = address || courseName;
-
-  if (!query) {
-    if (statusEl) statusEl.textContent = 'Enter an address, or a course name, to search.';
-    return;
-  }
-
-  if (statusEl) statusEl.textContent = 'Searching...';
-
-  try {
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    const results = await res.json();
-    if (!results || results.length === 0) {
-      if (statusEl) statusEl.textContent = 'Nothing found for that. Try a fuller address or a nearby town/park name.';
-      return;
-    }
-    const lat = Number(results[0].lat);
-    const lng = Number(results[0].lon);
-    if (statusEl) statusEl.textContent = '';
-    document.getElementById('enter-location-modal').classList.remove('active');
-    showCourseLocationConfirm(courseName || query, lat, lng, results[0].display_name);
-  } catch (err) {
-    if (statusEl) statusEl.textContent = 'Search failed — check your connection and try again.';
+  // Fully tear down the Leaflet map so no markers from a previous attempt
+  // (before a Cancel) linger into the next one.
+  if (holePlacementMap) {
+    holePlacementMap.remove();
+    holePlacementMap = null;
   }
 }
 
-function showCourseLocationConfirm(name, lat, lng, displayName) {
-  pendingCourseLat = lat;
-  pendingCourseLng = lng;
-  pendingCourseLocationConfirmed = false;
-
-  document.getElementById('course-location-message').textContent =
-    'Is this the location for "' + name + '"?' + (displayName ? (' (' + displayName + ')') : '');
-
-  document.getElementById('new-course-modal').classList.remove('active');
-  document.getElementById('course-location-modal').classList.add('active');
-
-  setTimeout(() => {
-    if (!courseLocationMap && typeof L !== 'undefined') {
-      courseLocationMap = L.map('course-location-map', { zoomAnimation: false, fadeAnimation: false });
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19,
-        attribution: 'Tiles &copy; Esri',
-        detectRetina: true
-      }).addTo(courseLocationMap);
-    }
-    if (courseLocationMap) {
-      courseLocationMap.setView([lat, lng], 16);
-      if (!courseLocationMapMarker) {
-        courseLocationMapMarker = L.marker([lat, lng]).addTo(courseLocationMap);
-      } else {
-        courseLocationMapMarker.setLatLng([lat, lng]);
-      }
-      courseLocationMap.invalidateSize();
-    }
-  }, 50);
+function handleNcInfoNext() {
+  const name = document.getElementById('nc-course-name').value.trim();
+  if (!name) { showGenericModal('Please enter a course name.'); return; }
+  showNCScreen('nc-screen-holes');
+  generateHoleFieldsV2();
 }
 
-function generateHoleFields() {
-  const count = Math.max(1, Math.min(36, Number(document.getElementById('new-course-hole-count').value) || 18));
-  const container = document.getElementById('new-course-holes-container');
+function generateHoleFieldsV2() {
+  const count = Number(document.getElementById('nc-hole-count').value) || 18;
+  const container = document.getElementById('nc-holes-container');
   container.innerHTML = '';
   for (let i = 1; i <= count; i++) {
     const row = document.createElement('div');
     row.className = 'new-course-hole-row';
-    row.innerHTML =
-      '<span>Hole ' + i + '</span>' +
-      '<input type="number" min="1" placeholder="Length (ft)" data-hole="' + i + '" data-field="length"/>' +
-      '<input type="number" min="1" placeholder="Par" data-hole="' + i + '" data-field="par" value="3"/>';
+
+    const label = document.createElement('span');
+    label.textContent = 'Hole ' + i;
+
+    const lengthInput = document.createElement('input');
+    lengthInput.type = 'number';
+    lengthInput.min = '1';
+    lengthInput.placeholder = 'Length (ft)';
+    lengthInput.dataset.hole = i;
+    lengthInput.dataset.field = 'length';
+    lengthInput.style.width = '5.5rem';
+    lengthInput.style.flex = '0 0 auto';
+
+    const parSelect = document.createElement('select');
+    parSelect.dataset.hole = i;
+    parSelect.dataset.field = 'par';
+    parSelect.style.width = '4.5rem';
+    parSelect.style.flex = '0 0 auto';
+    for (let p = 2; p <= 7; p++) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = 'Par ' + p;
+      if (p === 3) opt.selected = true;
+      parSelect.appendChild(opt);
+    }
+
+    row.appendChild(label);
+    row.appendChild(lengthInput);
+    row.appendChild(parSelect);
     container.appendChild(row);
   }
 }
 
-async function saveNewCourse() {
-  const name = document.getElementById('new-course-name').value.trim();
-  const container = document.getElementById('new-course-holes-container');
-  const rows = container.querySelectorAll('.new-course-hole-row');
+async function geocodeQuery(query) {
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const results = await res.json();
+    if (!results || results.length === 0) return null;
+    return { lat: Number(results[0].lat), lng: Number(results[0].lon), displayName: results[0].display_name };
+  } catch (err) {
+    return null;
+  }
+}
 
-  if (!name) { showGenericModal('Please enter a course name.'); return; }
-  if (rows.length === 0) { showGenericModal('Click "Set Up Holes" first.'); return; }
+async function handleNcMapYes() {
+  const name = document.getElementById('nc-course-name').value.trim();
+  const statusEl = document.getElementById('nc-map-prompt-status');
+  statusEl.textContent = 'Looking up ' + name + '...';
 
-  const holes = [];
-  for (let i = 0; i < rows.length; i++) {
-    const lengthInput = rows[i].querySelector('[data-field="length"]');
-    const parInput = rows[i].querySelector('[data-field="par"]');
-    holes.push({
-      number: i + 1,
-      length: Number(lengthInput.value) || 0,
-      par: Number(parInput.value) || 3
-    });
+  const result = await geocodeQuery(name + ' disc golf course');
+  if (result) {
+    pendingCourseLat = result.lat;
+    pendingCourseLng = result.lng;
+    statusEl.textContent = '';
+    document.getElementById('new-course-modal').classList.remove('active');
+    launchHolePlacementWizard();
+    return;
   }
 
+  statusEl.textContent = "Couldn't find it by name — enter its address.";
+  document.getElementById('new-course-modal').classList.remove('active');
+  document.getElementById('enter-location-modal').classList.add('active');
+  document.getElementById('enter-location-status').textContent = '';
+  document.getElementById('course-address-input').focus();
+}
+
+async function handleCourseAddressSearch() {
+  const addressInput = document.getElementById('course-address-input');
+  const statusEl = document.getElementById('enter-location-status');
+  const address = addressInput.value.trim();
+
+  if (!address) {
+    statusEl.textContent = 'Enter an address or place name to search.';
+    return;
+  }
+
+  statusEl.textContent = 'Searching...';
+  const result = await geocodeQuery(address);
+  if (!result) {
+    statusEl.textContent = 'Nothing found for that. Try a fuller address or a nearby town/park name.';
+    return;
+  }
+
+  pendingCourseLat = result.lat;
+  pendingCourseLng = result.lng;
+  statusEl.textContent = '';
+  document.getElementById('enter-location-modal').classList.remove('active');
+  launchHolePlacementWizard();
+}
+
+/* ---------- Hole placement wizard ---------- */
+
+function launchHolePlacementWizard() {
+  const rows = document.querySelectorAll('#nc-holes-container .new-course-hole-row');
+  holePlacementHoles = [];
+  rows.forEach((row, i) => {
+    const parSelect = row.querySelector('[data-field="par"]');
+    holePlacementHoles.push({ number: i + 1, par: Number(parSelect.value) || 3 });
+  });
+
+  pendingHoleGeo = holePlacementHoles.map(() => ({ tee: null, basket: null, waypoints: [] }));
+  holeMarkersHistory = holePlacementHoles.map(() => ({}));
+  allBasketMarkers = [];
+  holePlacementIndex = 0;
+
+  document.getElementById('hole-placement-modal').classList.add('active');
+
+  const center = (pendingCourseLat != null && pendingCourseLng != null) ? [pendingCourseLat, pendingCourseLng] : [0, 0];
+
+  if (!holePlacementMap && typeof L !== 'undefined') {
+    holePlacementMap = L.map('hole-placement-map', { zoomAnimation: false, fadeAnimation: false, zoomSnap: 0.25, zoomDelta: 0.5 });
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri',
+      detectRetina: true
+    }).addTo(holePlacementMap);
+    holePlacementMap.on('click', handleHolePlacementMapClick);
+  }
+  holePlacementMap.setView(center, 18);
+  setTimeout(() => holePlacementMap.invalidateSize(), 50);
+
+  beginHoleTee(0);
+}
+
+function beginHoleTee(index) {
+  holePlacementIndex = index;
+  holePlacementSubStep = 'tee-tap';
+  holePlacementRotation = 0;
+  holePlacementWaypointMarkers = [];
+  holePlacementCurrentWaypointMarker = null;
+  holePlacementTeeMarker = null;
+  holePlacementBasketMarker = null;
+  updateHolePlacementUI();
+}
+
+function updateMarkerHoleLabel(marker, holeNumbers) {
+  const text = holeNumbers.join(', ');
+  if (marker.getTooltip()) {
+    marker.setTooltipContent(text);
+  } else {
+    marker.bindTooltip(text, {
+      permanent: true,
+      direction: 'right',
+      offset: [12, 0],
+      className: 'hole-number-label'
+    });
+  }
+}
+
+function handleHolePlacementMapClick(e) {
+  const currentHoleNumber = holePlacementHoles[holePlacementIndex].number;
+
+  if (holePlacementSubStep === 'tee-tap') {
+    const teeDivIcon = L.divIcon({
+      html: '<img src="' + TEE_PAD_ICON_URL + '" style="width:22px;height:44px;display:block;transform:rotate(0deg);"/>',
+      className: 'placement-div-icon',
+      iconSize: [22, 44],
+      iconAnchor: [11, 22]
+    });
+    holePlacementTeeMarker = L.marker(e.latlng, { icon: teeDivIcon, draggable: true }).addTo(holePlacementMap);
+    updateMarkerHoleLabel(holePlacementTeeMarker, [currentHoleNumber]);
+    holePlacementRotation = 0;
+    holePlacementSubStep = 'tee-confirm';
+    updateHolePlacementUI();
+    applyTeeRotationToMarker();
+
+  } else if (holePlacementSubStep === 'basket-tap') {
+    holePlacementBasketMarker = L.marker(e.latlng, { icon: makeBasketIcon(), draggable: true }).addTo(holePlacementMap);
+    updateMarkerHoleLabel(holePlacementBasketMarker, [currentHoleNumber]);
+    holePlacementSubStep = 'basket-confirm';
+    updateHolePlacementUI();
+
+  } else if (holePlacementSubStep === 'waypoint-tap') {
+    const wpIcon = L.divIcon({
+      html: '<div style="width:12px;height:12px;border-radius:50%;background:var(--mustard);border:2px solid var(--dark-teal);"></div>',
+      className: 'placement-div-icon',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+    holePlacementCurrentWaypointMarker = L.marker(e.latlng, { icon: wpIcon, draggable: true }).addTo(holePlacementMap);
+    holePlacementSubStep = 'waypoint-confirm';
+    updateHolePlacementUI();
+  }
+  // Any other sub-step: ignore taps.
+}
+
+function handleTeeRotationInput(e) {
+  holePlacementRotation = Number(e.target.value);
+  applyTeeRotationToMarker();
+}
+
+function applyTeeRotationToMarker() {
+  if (!holePlacementTeeMarker) return;
+  const el = holePlacementTeeMarker.getElement();
+  if (!el) return;
+  const img = el.querySelector('img');
+  if (img) img.style.transform = 'rotate(' + holePlacementRotation + 'deg)';
+}
+
+function handleHolePlacementConfirm() {
+  const currentHoleNumber = holePlacementHoles[holePlacementIndex].number;
+
+  if (holePlacementSubStep === 'tee-confirm') {
+    const ll = holePlacementTeeMarker.getLatLng();
+    pendingHoleGeo[holePlacementIndex].tee = { lat: ll.lat, lng: ll.lng, rotation: holePlacementRotation };
+    holeMarkersHistory[holePlacementIndex].teeMarker = holePlacementTeeMarker;
+    holePlacementSubStep = 'basket-tap';
+    updateHolePlacementUI();
+
+  } else if (holePlacementSubStep === 'basket-confirm') {
+    const ll = holePlacementBasketMarker.getLatLng();
+    pendingHoleGeo[holePlacementIndex].basket = { lat: ll.lat, lng: ll.lng };
+    const entry = { holeNumbers: [currentHoleNumber], marker: holePlacementBasketMarker, lat: ll.lat, lng: ll.lng };
+    allBasketMarkers.push(entry);
+    holeMarkersHistory[holePlacementIndex].basketEntry = entry;
+    holePlacementSubStep = 'waypoint-tap';
+    updateHolePlacementUI();
+
+  } else if (holePlacementSubStep === 'waypoint-confirm') {
+    holePlacementWaypointMarkers.push(holePlacementCurrentWaypointMarker);
+    holePlacementCurrentWaypointMarker = null;
+    holePlacementSubStep = 'waypoint-tap';
+    updateHolePlacementUI();
+  }
+}
+
+function handleRemoveCurrentWaypoint() {
+  if (holePlacementCurrentWaypointMarker && holePlacementMap) {
+    holePlacementMap.removeLayer(holePlacementCurrentWaypointMarker);
+  }
+  holePlacementCurrentWaypointMarker = null;
+  holePlacementSubStep = 'waypoint-tap';
+  updateHolePlacementUI();
+}
+
+function openReuseBasketModal() {
+  if (allBasketMarkers.length === 0) return;
+  const select = document.getElementById('reuse-basket-select');
+  select.innerHTML = '';
+  allBasketMarkers.forEach((entry, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = 'Hole ' + entry.holeNumbers.join(', ');
+    select.appendChild(opt);
+  });
+  document.getElementById('reuse-basket-modal').classList.add('active');
+}
+
+function useReuseBasketSelection() {
+  const select = document.getElementById('reuse-basket-select');
+  const entry = allBasketMarkers[Number(select.value)];
+  if (!entry) return;
+
+  const currentHoleNumber = holePlacementHoles[holePlacementIndex].number;
+  entry.holeNumbers.push(currentHoleNumber);
+  updateMarkerHoleLabel(entry.marker, entry.holeNumbers);
+
+  pendingHoleGeo[holePlacementIndex].basket = { lat: entry.lat, lng: entry.lng };
+  holeMarkersHistory[holePlacementIndex].basketEntry = entry;
+
+  document.getElementById('reuse-basket-modal').classList.remove('active');
+  holePlacementSubStep = 'waypoint-tap';
+  updateHolePlacementUI();
+}
+
+function handleDoneWithWaypoints() {
+  pendingHoleGeo[holePlacementIndex].waypoints = holePlacementWaypointMarkers.map(m => {
+    const ll = m.getLatLng();
+    return { lat: ll.lat, lng: ll.lng };
+  });
+  holeMarkersHistory[holePlacementIndex].waypointMarkers = holePlacementWaypointMarkers.slice();
+
+  const nextIndex = holePlacementIndex + 1;
+  if (nextIndex < holePlacementHoles.length) {
+    beginHoleTee(nextIndex);
+  } else {
+    holePlacementSubStep = 'done';
+    updateHolePlacementUI();
+  }
+}
+
+function clearCurrentHoleInProgressMarkers() {
+  if (holePlacementTeeMarker) { holePlacementMap.removeLayer(holePlacementTeeMarker); holePlacementTeeMarker = null; }
+  if (holePlacementBasketMarker) { holePlacementMap.removeLayer(holePlacementBasketMarker); holePlacementBasketMarker = null; }
+  if (holePlacementCurrentWaypointMarker) { holePlacementMap.removeLayer(holePlacementCurrentWaypointMarker); holePlacementCurrentWaypointMarker = null; }
+  holePlacementWaypointMarkers.forEach(m => holePlacementMap.removeLayer(m));
+  holePlacementWaypointMarkers = [];
+}
+
+function goToPreviousHole() {
+  const targetIndex = (holePlacementSubStep === 'done') ? holePlacementHoles.length - 1 : holePlacementIndex - 1;
+  if (targetIndex < 0) return;
+
+  if (holePlacementSubStep !== 'done') {
+    clearCurrentHoleInProgressMarkers();
+  }
+
+  const hist = holeMarkersHistory[targetIndex] || {};
+  if (hist.teeMarker) holePlacementMap.removeLayer(hist.teeMarker);
+  if (hist.waypointMarkers) hist.waypointMarkers.forEach(m => holePlacementMap.removeLayer(m));
+  if (hist.basketEntry) {
+    const entry = hist.basketEntry;
+    const holeNum = holePlacementHoles[targetIndex].number;
+    entry.holeNumbers = entry.holeNumbers.filter(n => n !== holeNum);
+    if (entry.holeNumbers.length === 0) {
+      holePlacementMap.removeLayer(entry.marker);
+      allBasketMarkers = allBasketMarkers.filter(e => e !== entry);
+    } else {
+      updateMarkerHoleLabel(entry.marker, entry.holeNumbers);
+    }
+  }
+
+  holeMarkersHistory[targetIndex] = {};
+  pendingHoleGeo[targetIndex] = { tee: null, basket: null, waypoints: [] };
+  beginHoleTee(targetIndex);
+}
+
+function updateHolePlacementUI() {
+  const instructionsEl = document.getElementById('hole-placement-instructions');
+  const rotationRow = document.getElementById('hole-placement-rotation-row');
+  const confirmBtn = document.getElementById('hole-placement-confirm-btn');
+  const removeBtn = document.getElementById('hole-placement-remove-point-btn');
+  const doneWaypointsBtn = document.getElementById('hole-placement-done-waypoints-btn');
+  const finishBtn = document.getElementById('hole-placement-finish-btn');
+  const reuseBasketBtn = document.getElementById('hole-placement-reuse-basket-btn');
+  const previousHoleBtn = document.getElementById('hole-placement-previous-hole-btn');
+
+  rotationRow.classList.add('hide');
+  confirmBtn.classList.add('hide');
+  removeBtn.classList.add('hide');
+  doneWaypointsBtn.classList.add('hide');
+  finishBtn.classList.add('hide');
+  reuseBasketBtn.classList.add('hide');
+
+  const canGoBack = (holePlacementSubStep === 'done') ? holePlacementHoles.length > 0 : holePlacementIndex > 0;
+  previousHoleBtn.classList.toggle('hide', !canGoBack);
+
+  const hole = holePlacementHoles[holePlacementIndex];
+  const holeLabel = hole ? ('Hole ' + hole.number + ' (Par ' + hole.par + ')') : '';
+
+  switch (holePlacementSubStep) {
+    case 'tee-tap':
+      instructionsEl.textContent = holeLabel + ': Tap the map to place the tee pad.';
+      break;
+    case 'tee-confirm':
+      instructionsEl.textContent = holeLabel + ': Drag to adjust, use the slider to set facing direction, then Confirm.';
+      rotationRow.classList.remove('hide');
+      confirmBtn.classList.remove('hide');
+      document.getElementById('hole-placement-rotation').value = 0;
+      break;
+    case 'basket-tap':
+      instructionsEl.textContent = holeLabel + ': Tap the map to place the basket.';
+      if (allBasketMarkers.length > 0) reuseBasketBtn.classList.remove('hide');
+      break;
+    case 'basket-confirm':
+      instructionsEl.textContent = holeLabel + ': Drag to adjust, then Confirm.';
+      confirmBtn.classList.remove('hide');
+      break;
+    case 'waypoint-tap':
+      instructionsEl.textContent = holeLabel + ": Optional — tap the map to add a point along the path, or click 'No More Waypoints' to continue.";
+      doneWaypointsBtn.classList.remove('hide');
+      break;
+    case 'waypoint-confirm':
+      instructionsEl.textContent = holeLabel + ': Drag to adjust, then Confirm (or Remove).';
+      confirmBtn.classList.remove('hide');
+      removeBtn.classList.remove('hide');
+      break;
+    case 'done':
+      instructionsEl.textContent = 'All holes placed. Click Finish to save the course.';
+      finishBtn.classList.remove('hide');
+      break;
+  }
+}
+
+function cancelHolePlacementWizard() {
+  showConfirmModal('All course data will be lost. Continue?', () => {
+    document.getElementById('hole-placement-modal').classList.remove('active');
+    document.getElementById('new-course-modal').classList.remove('active');
+    resetCourseCreationState();
+  });
+}
+
+/* ---------- Finish review: reconcile hole lengths vs map distances ---------- */
+
+function haversineFeet(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // meters
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 3.28084; // meters -> feet
+}
+
+function bearingDegrees(lat1, lng1, lat2, lng2) {
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const y = Math.sin(toRad(lng2 - lng1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function destinationPoint(lat1, lng1, bearingDeg, distanceFeet) {
+  const R = 6371000;
+  const d = distanceFeet / 3.28084; // feet -> meters
+  const toRad = deg => deg * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const brng = toRad(bearingDeg);
+  const lat1r = toRad(lat1), lng1r = toRad(lng1);
+  const lat2r = Math.asin(Math.sin(lat1r) * Math.cos(d / R) + Math.cos(lat1r) * Math.sin(d / R) * Math.cos(brng));
+  const lng2r = lng1r + Math.atan2(Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1r), Math.cos(d / R) - Math.sin(lat1r) * Math.sin(lat2r));
+  return { lat: toDeg(lat2r), lng: toDeg(lng2r) };
+}
+
+function applyLengthsFromMap() {
+  const rows = document.querySelectorAll('#nc-holes-container .new-course-hole-row');
+  rows.forEach((row, i) => {
+    const geo = pendingHoleGeo[i];
+    if (!geo || !geo.tee || !geo.basket) return;
+    const feet = haversineFeet(geo.tee.lat, geo.tee.lng, geo.basket.lat, geo.basket.lng);
+    const lengthInput = row.querySelector('[data-field="length"]');
+    lengthInput.value = Math.round(feet);
+  });
+}
+
+function applyMapFromLengths() {
+  const rows = document.querySelectorAll('#nc-holes-container .new-course-hole-row');
+  rows.forEach((row, i) => {
+    const geo = pendingHoleGeo[i];
+    if (!geo || !geo.tee || !geo.basket) return;
+    const lengthInput = row.querySelector('[data-field="length"]');
+    const targetFeet = Number(lengthInput.value);
+    if (!targetFeet) return;
+    const bearing = bearingDegrees(geo.tee.lat, geo.tee.lng, geo.basket.lat, geo.basket.lng);
+    const newBasket = destinationPoint(geo.tee.lat, geo.tee.lng, bearing, targetFeet);
+    geo.basket = { lat: newBasket.lat, lng: newBasket.lng };
+  });
+}
+
+function promptSaveOrBack() {
+  document.getElementById('save-visibility-modal').classList.add('active');
+}
+
+async function finishCourseCreation() {
+  const name = document.getElementById('nc-course-name').value.trim();
+  const rows = document.querySelectorAll('#nc-holes-container .new-course-hole-row');
+
+  if (!name || rows.length === 0) {
+    showGenericModal('Missing course name or hole details.');
+    return;
+  }
+
+  const holes = [];
+  rows.forEach((row, i) => {
+    const lengthInput = row.querySelector('[data-field="length"]');
+    const parSelect = row.querySelector('[data-field="par"]');
+    const hole = {
+      number: i + 1,
+      length: Number(lengthInput.value) || 0,
+      par: Number(parSelect.value) || 3
+    };
+    const geo = pendingHoleGeo[i];
+    if (geo) {
+      if (geo.tee) hole.tee = geo.tee;
+      if (geo.basket) hole.basket = geo.basket;
+      if (geo.waypoints && geo.waypoints.length) hole.waypoints = geo.waypoints;
+    }
+    holes.push(hole);
+  });
+
   const db = await openDiscTallyDB();
-  const courseRecord = { name, holes };
-  if (pendingCourseLocationConfirmed && pendingCourseLat != null && pendingCourseLng != null) {
+  const courseRecord = { name, holes, visibility: pendingCourseVisibility };
+  if (pendingCourseLat != null && pendingCourseLng != null) {
     courseRecord.lat = pendingCourseLat;
     courseRecord.lng = pendingCourseLng;
   }
   await addCourse(db, courseRecord);
-  pendingCourseLat = null;
-  pendingCourseLng = null;
-  pendingCourseLocationConfirmed = false;
+
+  document.getElementById('hole-placement-modal').classList.remove('active');
   closeNewCourseModal();
+  resetCourseCreationState();
   await loadCourseOptions();
 }
 
@@ -351,12 +840,16 @@ async function saveNewCourse() {
 
 function startRound(course) {
   const playerName = localStorage.getItem('userName') || 'Player 1';
+  const holes = course.holes || [];
+  const hasCourseMap = holes.some(h => h.tee || h.basket);
+
   currentRound = {
     courseId: course.id,
     courseName: course.name,
-    holes: course.holes || [],
+    holes: holes,
     courseLat: course.lat != null ? course.lat : null,
     courseLng: course.lng != null ? course.lng : null,
+    hasCourseMap: hasCourseMap,
     players: [
       { name: playerName, scores: {} }
     ]
@@ -367,7 +860,12 @@ function startRound(course) {
   document.getElementById('stats-section').classList.add('hide');
   document.getElementById('scorecard-card').classList.remove('hide');
 
-  showHeaderMap();
+  // Only bring up the map if this course actually has tee/basket data saved.
+  // Otherwise leave the plain header image showing — an empty satellite
+  // view with nothing plotted on it isn't useful.
+  if (hasCourseMap) {
+    showHeaderMap();
+  }
   buildScorecard(currentRound);
 }
 
@@ -377,6 +875,85 @@ function exitRound() {
   document.getElementById('controls-section').classList.remove('hide');
   document.getElementById('course-actions-section').classList.remove('hide');
   hideHeaderMap();
+
+  // Tear down the map so the next round (possibly a different course)
+  // starts from a clean slate instead of showing this course's overlay.
+  if (headerMap) {
+    headerMap.remove();
+    headerMap = null;
+    headerMapMarker = null;
+  }
+  if (mapZoomMap) {
+    mapZoomMap.remove();
+    mapZoomMap = null;
+    mapZoomMarker = null;
+  }
+}
+
+// Finds which hole the player is currently on (first hole missing a score
+// for the first player), so the round map can center tightly on THAT hole
+// instead of fitBounds-ing the entire course (which, spread across 18
+// holes, forces a much wider/zoomed-out view than course setup ever used).
+function getCurrentHole(round) {
+  if (!round || !round.holes || round.holes.length === 0) return null;
+  const player = round.players && round.players[0];
+  if (player) {
+    for (const h of round.holes) {
+      if (player.scores[h.number] == null) return h;
+    }
+  }
+  return round.holes[round.holes.length - 1];
+}
+
+// Centers on the midpoint between tee and basket when both exist, so
+// neither ends up off to one side of the view — falls back to whichever
+// single point is available.
+function getHoleCenter(hole) {
+  if (!hole) return null;
+  if (hole.tee && hole.basket) {
+    return { lat: (hole.tee.lat + hole.basket.lat) / 2, lng: (hole.tee.lng + hole.basket.lng) / 2 };
+  }
+  return hole.tee || hole.basket || null;
+}
+
+// Called whenever a score is entered — pans the round map to whatever
+// hole is now "current" (first hole still missing a score), so the map
+// follows along as the round progresses instead of staying on hole 1.
+function followMapToCurrentHole() {
+  if (!headerMap || !currentRound || !currentRound.hasCourseMap) return;
+  const hole = getCurrentHole(currentRound);
+  const point = getHoleCenter(hole);
+  if (!point) return;
+  headerMap.setView([point.lat, point.lng], 18);
+}
+
+function renderCourseOverlay(map, holes) {
+  const bounds = [];
+  holes.forEach(h => {
+    if (h.tee) {
+      const teeDivIcon = L.divIcon({
+        html: '<img src="' + TEE_PAD_ICON_URL + '" style="width:22px;height:44px;display:block;transform:rotate(' + (h.tee.rotation || 0) + 'deg);"/>',
+        className: 'placement-div-icon',
+        iconSize: [22, 44],
+        iconAnchor: [11, 22]
+      });
+      const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeDivIcon }).addTo(map);
+      m.bindTooltip(String(h.number), { permanent: true, direction: 'right', offset: [10, 0], className: 'hole-number-label' });
+      bounds.push([h.tee.lat, h.tee.lng]);
+    }
+    if (h.basket) {
+      const m = L.marker([h.basket.lat, h.basket.lng], { icon: makeBasketIcon() }).addTo(map);
+      m.bindTooltip(String(h.number), { permanent: true, direction: 'right', offset: [10, 0], className: 'hole-number-label' });
+      bounds.push([h.basket.lat, h.basket.lng]);
+    }
+    if (h.tee && h.basket) {
+      const pts = [[h.tee.lat, h.tee.lng]];
+      (h.waypoints || []).forEach(w => pts.push([w.lat, w.lng]));
+      pts.push([h.basket.lat, h.basket.lng]);
+      L.polyline(pts, { color: '#F2B705', weight: 2, opacity: 0.85 }).addTo(map);
+    }
+  });
+  return bounds;
 }
 
 /* ---------- Header map ---------- */
@@ -395,41 +972,46 @@ function showHeaderMap() {
 
   if (!headerMap && typeof L !== 'undefined') {
     headerMap = L.map('header-map', {
-      zoomControl: false,
+      zoomControl: true,
       attributionControl: true,
       zoomAnimation: false,
       fadeAnimation: false,
-      doubleClickZoom: false
+      doubleClickZoom: false,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5
     });
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
       attribution: 'Tiles &copy; Esri',
       detectRetina: true
     }).addTo(headerMap);
-    headerMap.setView(initialCenter, 16);
+
+    if (currentRound && currentRound.hasCourseMap) {
+      renderCourseOverlay(headerMap, currentRound.holes);
+    }
+
+    // Center tightly on the CURRENT hole (same fixed zoom the course-setup
+    // map uses) rather than fitBounds-ing the whole course — fitting every
+    // hole into one view is what was forcing the zoomed-way-out result.
+    const currentHole = currentRound && currentRound.hasCourseMap ? getCurrentHole(currentRound) : null;
+    const holeCenterPoint = getHoleCenter(currentHole);
+    const holeCenter = holeCenterPoint ? [holeCenterPoint.lat, holeCenterPoint.lng] : null;
+
+    // Fitting bounds / setting view must happen AFTER the container has
+    // actually been laid out (it was just unhidden this same tick), or
+    // Leaflet computes against a stale zero-size box and everything
+    // ends up positioned wrong — same delayed callback as invalidateSize.
+    setTimeout(() => {
+      headerMap.invalidateSize();
+      if (holeCenter) {
+        headerMap.setView(holeCenter, 18);
+      } else {
+        headerMap.setView(initialCenter, 16);
+      }
+    }, 50);
   } else if (headerMap) {
     headerMap.setView(initialCenter, 16);
-  }
-
-  if (headerMap) {
     setTimeout(() => headerMap.invalidateSize(), 50);
-  }
-
-  if (headerMap && navigator.geolocation) {
-    if (headerMapWatchId != null) navigator.geolocation.clearWatch(headerMapWatchId);
-    headerMapWatchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const latlng = [pos.coords.latitude, pos.coords.longitude];
-        headerMap.setView(latlng, 17);
-        if (!headerMapMarker) {
-          headerMapMarker = L.marker(latlng).addTo(headerMap);
-        } else {
-          headerMapMarker.setLatLng(latlng);
-        }
-      },
-      () => { /* location unavailable; map stays at default view */ },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-    );
   }
 }
 
@@ -470,16 +1052,21 @@ function openMapZoomModal() {
   const center = headerMap.getCenter();
   const zoom = headerMap.getZoom();
 
-  if (!mapZoomMap) {
-    mapZoomMap = L.map('map-zoom-map', { zoomAnimation: false, fadeAnimation: false });
+  const isNewMap = !mapZoomMap;
+  if (isNewMap) {
+    mapZoomMap = L.map('map-zoom-map', { zoomAnimation: false, fadeAnimation: false, zoomControl: true, zoomSnap: 0.25, zoomDelta: 0.5 });
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
       attribution: 'Tiles &copy; Esri',
       detectRetina: true
     }).addTo(mapZoomMap);
-  }
 
-  mapZoomMap.setView(center, zoom);
+    // Mirror the same tee/basket/path overlay shown on the small map —
+    // this was previously missing entirely from the enlarged view.
+    if (currentRound && currentRound.hasCourseMap) {
+      renderCourseOverlay(mapZoomMap, currentRound.holes);
+    }
+  }
 
   if (headerMapMarker) {
     const markerLatLng = headerMapMarker.getLatLng();
@@ -490,7 +1077,12 @@ function openMapZoomModal() {
     }
   }
 
-  setTimeout(() => mapZoomMap.invalidateSize(), 50);
+  // Same layout-timing fix as the small map: don't set the view until
+  // the container has actually been laid out (it was just unhidden).
+  setTimeout(() => {
+    mapZoomMap.invalidateSize();
+    mapZoomMap.setView(center, zoom);
+  }, 50);
 }
 
 function buildScorecard(round) {
@@ -588,6 +1180,7 @@ function buildHoleTable(round, holesSubset, offset) {
         display.textContent = value;
         display.classList.add('has-score');
         renderScorecardTotals(round);
+        followMapToCurrentHole();
       });
 
       wrap.appendChild(select);
