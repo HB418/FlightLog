@@ -7,8 +7,10 @@
   <link rel="icon" href="img/basketFavicon.png"/>
   <!-- PaperCSS -->
   <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css"/>
+  <!-- Leaflet (map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css"/>
+  <link rel="stylesheet" href="css/styles.css?v=5"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -26,37 +28,160 @@
   <!-- Header -->
   <header class="row">
     <div class="col">
-      <img src="img/flightLogHeader.png" alt="Flight Log" style="max-width:100%;height:auto;"/>
+      <img id="header-image" src="img/flightLogHeader.png" alt="Flight Log" style="max-width:100%;height:auto;"/>
+      <div id="header-map" class="hide"></div>
     </div>
   </header>
 
   <!-- Welcome Modal -->
 
   <!-- Alerts Modal -->
-  <div id="generic-modal" class="modal" style="display:none;">
-    <div class="modal-body">
+  <div id="generic-modal" class="custom-modal">
+    <div class="custom-modal-content">
       <p id="generic-modal-message"></p>
-      <button id="generic-modal-ok" class="btn-primary">OK</button>
+      <button id="generic-modal-ok" class="paper-btn">OK</button>
     </div>
   </div>
 
-  <!-- Score Entry Modal -->
-  <div id="score-modal" class="modal" style="display:none;">
-    <div class="modal-body">
-      <h5>Enter Score</h5>
-      <form id="score-form">
-        <label for="strokes-input">Strokes</label>
-        <input type="number" id="strokes-input" required/>
-        <!-- Additional fields for C1R, putts, penalties would go here -->
-        <button type="submit" id="save-score-btn" class="btn-primary btn-block">Save</button>
-        <button type="button" id="cancel-score-btn" class="btn-secondary">Cancel</button>
-      </form>
+  <!-- New Course Modal -->
+  <div id="new-course-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
+      <h4>New Course</h4>
+      <label for="new-course-name">Course Name</label>
+      <input type="text" id="new-course-name" placeholder="Course name" style="width:100%;margin-bottom:0.75rem;"/>
+      <button id="find-course-location-btn" type="button" class="paper-btn" style="margin-bottom:0.75rem;">Enter Course Location</button>
+      <div id="course-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.5rem;"></div>
+
+      <label for="new-course-hole-count">Number of Holes</label>
+      <input type="number" id="new-course-hole-count" min="1" max="36" value="18" style="width:100%;margin-bottom:0.75rem;"/>
+
+      <button id="generate-hole-fields-btn" class="paper-btn">Set Up Holes</button>
+
+      <div id="new-course-holes-container" style="max-height:40vh;overflow-y:auto;margin-top:0.75rem;"></div>
+
+      <div style="margin-top:1rem;text-align:center;">
+        <button id="save-new-course-btn" class="paper-btn">Save Course</button>
+        <button id="cancel-new-course-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enter Course Location (address) Modal -->
+  <div id="enter-location-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
+      <h4>Enter Course Location</h4>
+      <p style="font-size:0.85rem;">Enter the course's street address, or the nearest town/park name if you don't know the exact address.</p>
+      <label for="course-address-input">Address or place name</label>
+      <input type="text" id="course-address-input" placeholder="e.g. 123 Main St, Springfield" style="width:100%;margin-bottom:0.75rem;"/>
+      <div id="enter-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.5rem;"></div>
+      <div style="text-align:center;">
+        <button id="search-course-address-btn" class="paper-btn">Search</button>
+        <button id="cancel-course-address-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Course Location Confirmation Modal -->
+  <div id="course-location-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;">
+      <h4>Confirm Course Location</h4>
+      <p id="course-location-message" style="font-size:0.9rem;"></p>
+      <div id="course-location-map" style="width:100%;height:220px;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
+      <div style="text-align:center;">
+        <button id="course-location-yes-btn" class="paper-btn">Yes, that's it</button>
+        <button id="course-location-no-btn" class="paper-btn">Not correct</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Round Summary Modal -->
+  <div id="round-summary-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;">
+      <h4>Round Complete</h4>
+      <div id="round-summary-content"></div>
+      <button id="close-round-summary-btn" class="paper-btn">OK</button>
+    </div>
+  </div>
+
+  <!-- Back-button choice modal -->
+  <div id="back-choice-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;width:90%;">
+      <h4>Leave Scorecard</h4>
+      <p>Keep this round active so you can come back to it, or clear it?</p>
+      <div style="text-align:center;">
+        <button id="keep-active-btn" class="paper-btn">Keep Active</button>
+        <button id="clear-scorecard-btn" class="paper-btn">Clear Scorecard</button>
+        <button id="cancel-back-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic Yes/No confirmation modal -->
+  <div id="confirm-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;width:90%;">
+      <h4>Are you sure?</h4>
+      <p id="confirm-modal-message"></p>
+      <div style="text-align:center;">
+        <button id="confirm-yes-btn" class="paper-btn">Yes</button>
+        <button id="confirm-no-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Player Modal -->
+  <div id="add-player-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:400px;width:90%;">
+      <h4>Add Player</h4>
+      <input type="text" id="add-player-name" placeholder="Player name" style="width:100%;margin-bottom:0.75rem;"/>
+      <div style="text-align:center;">
+        <button id="save-add-player-btn" class="paper-btn">Add</button>
+        <button id="cancel-add-player-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Modal -->
+  <div id="stats-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:520px;width:95%;max-height:80vh;overflow-y:auto;text-align:left;">
+      <h4>Stats</h4>
+      <div id="stats-modal-content"></div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="clear-all-stats-btn" class="paper-btn">Clear All Stats</button>
+        <button id="delete-selected-rounds-btn" class="paper-btn">Delete Selected</button>
+        <button id="close-stats-modal-btn" class="paper-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Last Round Here Modal -->
+  <div id="last-round-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;max-height:80vh;overflow-y:auto;text-align:left;">
+      <h4>Last Round Here</h4>
+      <div id="last-round-modal-content"></div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="close-last-round-modal-btn" class="paper-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enlarged Map Modal -->
+  <div id="map-zoom-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:90vw;width:90vw;text-align:left;">
+      <h4>Course Map</h4>
+      <div id="map-zoom-map" style="width:100%;height:70vh;border-radius:0.4rem;"></div>
+      <div style="text-align:center;margin-top:0.75rem;">
+        <button id="close-map-zoom-btn" class="paper-btn">Close</button>
+      </div>
     </div>
   </div>
 
   <!-- Main Controls -->
 
 <section id="controls-section" class="row">
+  <div id="resume-round-banner" class="col-12 hide" style="text-align:center;margin-bottom:0.5rem;">
+    <p style="margin-bottom:0.3rem;font-size:0.9rem;" id="resume-round-text"></p>
+    <button id="resume-round-btn" class="btn btn--big btn--purple-blue">Resume Round</button>
+  </div>
   <div class="col-12">
     <select id="course-select" onchange="enableSelectCourse()">
       <option value="">Select a course</option>
@@ -86,15 +211,23 @@
   </section>
 
   <!-- Scorecard -->
-  <div id="scorecard-card" class="card" style="display:none;">
-    <div class="card-body" id="scorecard-container"></div>
+  <div id="scorecard-card" class="scorecard-panel hide">
+    <div id="scorecard-container" class="scorecard-scroll"></div>
+    <div class="button-row scorecard-actions">
+      <button id="finish-round-btn" class="btn btn--big btn--purple-blue">Finish Round</button>
+      <button id="back-to-menu-btn" class="btn btn--big btn--purple-blue">Back</button>
+    </div>
+    <div class="scorecard-history-link">
+      <a href="#" id="view-last-round-link">View last round here</a>
+    </div>
   </div>
 
   <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js"></script>
-  <script src="js/modals.js"></script>
-    <script src="js/darkmode.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/darkmode.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/main.js?v=7"></script>
   <script src="js/namePrompt.js"></script>
 
 
@@ -132,9 +265,9 @@
   <!-- Bottom Docked Menu -->
   <nav id="bottom-menu">
     <ul class="bottom-menu-list">
-      <li><a href="#">Home</a></li>
-      <li><a href="#">Courses</a></li>
-      <li><a href="#">Stats</a></li>
+      <li><a href="#" id="nav-home-link">Home</a></li>
+      <li><a href="#" id="nav-courses-link">Courses</a></li>
+      <li><a href="#" id="nav-stats-link">Stats</a></li>
     </ul>
   <div class="toggle-switch">
     <input type="checkbox" id="lock-toggle">

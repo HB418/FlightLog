@@ -1,104 +1,73 @@
-.flightlog-modal-content {
-  font-weight: normal !important;
-}
-
-/* Center all modal content */
-.flightlog-modal-content {
-  text-align: center !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-}
-
-
-/* Center modal overlay content */
-.flightlog-modal-overlay {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 100vh !important;
-  width: 100vw !important;
-}
-
-/* modal.css - updated header color, bold header only, increased spacing */
+/* css/modal.css
+   Styles for dynamically-created "flightlog" modals (see js/modals.js) */
 
 .flightlog-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
 .flightlog-modal-content {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 2px solid #026873 !important;
-  border-radius: 8px !important;
-  padding: 1.5rem !important;
-  max-width: 400px !important;
-  width: 90% !important;
-  box-sizing: border-box !important;
-  margin: auto !important;
-  font-family: 'Patrick Hand', cursive !important;
-  line-height: 1.5 !important;
+  background-color: #ffffff;
+  color: #000000;
+  border: 2px solid #026873;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+  box-sizing: border-box;
+  margin: auto;
+  font-family: 'Patrick Hand', cursive;
+  line-height: 1.5;
+  font-weight: normal;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-
-/* Light mode header */
-.flightlog-modal-content h2 {
-  margin: 0 0 1rem !important;
-  font-family: 'Permanent Marker', cursive !important;
-  font-size: 1.6rem !important;
-  color: #026873 !important;
-  font-weight: bold !important;
-  text-align: center !important;
-}
-
-/* Dark mode container & border */
 body.dark-mode .flightlog-modal-content {
-  background-color: #333333 !important;
-  color: #ffffff !important;
-  border-color: #F2B705 !important;
+  background-color: #333333;
+  color: #ffffff;
+  border-color: #F2B705;
 }
 
-/* Dark mode header */
+.flightlog-modal-content h2 {
+  margin: 0 0 1rem;
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #026873;
+  text-align: center;
+}
 body.dark-mode .flightlog-modal-content h2 {
-  color: #F27405 !important;
+  color: #F27405;
 }
 
-/* Body text spacing */
-.flightlog-modal-content > div,
-  font-weight: 300 !important;
-.flightlog-modal-content > p {
-  font-weight: 300 !important;
-  margin-bottom: 1rem !important;
-  font-weight: normal !important;
+.flightlog-modal-content p {
+  font-weight: normal;
+  margin-bottom: 1rem;
 }
 
-/* Buttons */
 .flightlog-modal-content button {
-  padding: 8px 16px !important;
-  border: none !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  font-family: 'Patrick Hand', cursive !important;
-  font-size: 1rem !important;
-  font-weight: normal !important;
-  background-color: #026873 !important;
-  color: #ffffff !important;
+  padding: 8px 16px;
+  margin: 0.5rem auto;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1rem;
+  font-weight: normal;
+  background-color: #026873;
+  color: #ffffff;
 }
-
-/* Dark mode buttons */
 body.dark-mode .flightlog-modal-content button {
-  background-color: #F27405 !important;
+  background-color: #F27405;
 }
-
-/* Button spacing */
 .flightlog-modal-content button + button {
-  margin-left: 1rem !important;
-}
-
-
-.flightlog-modal-content button {
-  margin: 0.5rem auto !important;
-}
-
-body.dark-mode .flightlog-modal-content h2, .flightlog-modal-content h2 {
-  font-weight: bold !important;
+  margin-left: 1rem;
 }
