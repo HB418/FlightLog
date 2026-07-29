@@ -90,15 +90,6 @@ function getAllRounds(db) {
   });
 }
 
-function deleteRound(db, id) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('rounds', 'readwrite');
-    tx.objectStore('rounds').delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = (e) => reject(e.target.error);
-  });
-}
-
 function deleteRounds(db, ids) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('rounds', 'readwrite');

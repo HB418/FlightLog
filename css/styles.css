@@ -311,13 +311,6 @@ body.dark-mode .score-display.has-score {
 
 /* ===== Stats list ===== */
 
-.stats-course-block {
-  margin-bottom: 1rem;
-}
-.stats-course-block h5 {
-  margin-bottom: 0.4rem;
-  font-size: 0.95rem;
-}
 .stats-round-row {
   display: flex;
   justify-content: space-between;
@@ -739,28 +732,27 @@ body.dark-mode #bottom-menu {
 }
 
 /* Desktop: center the header image/map instead of letting it stretch
-   full-width edge to edge. .row is a flexbox container (PaperCSS) and
-   .col shrinks to fit its content above 768px, so centering has to
-   happen on the row itself via justify-content, not on the image. */
+   full-width edge to edge. Uses the SAME centering mechanism as
+   #controls-section (margin:0 auto on a max-width box) instead of
+   flexbox justify-content — two different centering methods on two
+   sections that are supposed to align can drift apart by a pixel or
+   two; using one identical method on both guarantees they match. */
 @media (min-width: 768px) {
   header.row {
-    justify-content: center;
+    max-width: 500px;
+    margin: 1rem auto;
   }
-  /* PaperCSS's .col only gets an explicit width below 768px (flex:0 0 100%
-     in its own stylesheet); above that it's flex:0 1 auto (shrink-to-fit).
-     #header-map's own width:100% then has no defined parent width to
-     resolve against and collapses to ~0 — invisible, but only above this
-     breakpoint. Giving the column itself a concrete width fixes it for
-     both the image and the map. */
   header.row .col {
-    flex: 0 0 auto;
-    width: 500px;
+    flex: 0 0 100%;
+    max-width: 100%;
+    width: 100%;
+    padding: 0;
   }
   #header-image {
-    max-width: 500px;
+    max-width: 100%;
   }
   #header-map {
-    max-width: 500px;
+    max-width: 100%;
   }
 }
 

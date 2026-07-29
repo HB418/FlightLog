@@ -3,30 +3,83 @@
 let currentRound = null;      // { courseId, courseName, holes, players: [{name, scores:{hole:strokes}}] }
 let pendingConfirmCallback = null;
 let headerMap = null;
-let headerMapMarker = null;
-let headerMapWatchId = null;
+let headerMapLines = [];      // [{holeNumber, polyline}] — so the current hole's line can be colored red
+let mapZoomMapLines = [];
 let mapZoomMap = null;
-let mapZoomMarker = null;
 let pendingCourseLat = null;
 let pendingCourseLng = null;
 
 // Tee pad marker icon — a real illustrated asset (img/tee-pad.png), not a
 // pin, so it's anchored at its own center rather than a bottom point.
-// Native art is 242x481px; displayed small on the map.
-const TEE_PAD_ICON_URL = 'img/tee-pad.png';
+// Cropped art is 939x415px (landscape, long axis = direction of throw).
+// Cache-busted (?v=2) since browsers cache images by URL and this
+// filename previously pointed at different art.
+const TEE_PAD_ICON_URL = 'img/tee-pad.png?v=2';
+
+// Base sizes (in px) at ICON_BASE_ZOOM — icons scale up/down from here as
+// the map zooms, like a real object on the ground rather than a fixed
+// on-screen HUD element.
+const ICON_BASE_ZOOM = 18;
+const TEE_BASE_W = 33, TEE_BASE_H = 14;
+const BASKET_BASE_W = 16, BASKET_BASE_H = 21;
+
+function scaleForZoom(map) {
+  const z = map.getZoom();
+  // A freshly-created map has no zoom set yet until setView() runs (which
+  // happens on a delay, after tiles/markers are added) — getZoom() returns
+  // undefined in that window, which would otherwise propagate NaN through
+  // every icon size calculation below.
+  if (typeof z !== 'number' || isNaN(z)) return 1;
+  const scale = Math.pow(2, z - ICON_BASE_ZOOM);
+  return Math.max(0.35, Math.min(scale, 3));
+}
+
+function makeTeeDivIcon(rotationDeg, scale) {
+  scale = scale || 1;
+  const w = Math.max(8, Math.round(TEE_BASE_W * scale));
+  const h = Math.max(4, Math.round(TEE_BASE_H * scale));
+  return L.divIcon({
+    html: '<img src="' + TEE_PAD_ICON_URL + '" style="width:100%;height:100%;object-fit:contain;display:block;transform:rotate(' + (rotationDeg || 0) + 'deg);"/>',
+    className: 'placement-div-icon',
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h / 2]
+  });
+}
 
 // Basket marker icon — anchored at the bottom-center of the pole, since
 // this marker should point at one exact ground spot (unlike the tee pad,
 // which represents an area and is anchored at its own center).
 // Uses a divIcon (not L.icon) with object-fit:contain so the real image's
 // aspect ratio is preserved instead of being stretched to fill iconSize.
-const BASKET_ICON_URL = 'img/basket.png';
-function makeBasketIcon() {
+const BASKET_ICON_URL = 'img/basket.png?v=2';
+function makeBasketIcon(scale) {
+  scale = scale || 1;
+  const w = Math.max(6, Math.round(BASKET_BASE_W * scale));
+  const h = Math.max(8, Math.round(BASKET_BASE_H * scale));
   return L.divIcon({
     html: '<img src="' + BASKET_ICON_URL + '" style="width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;"/>',
     className: 'placement-div-icon',
-    iconSize: [66, 88],
-    iconAnchor: [33, 88]
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h]
+  });
+}
+
+// Marker registries so tee/basket icons can be rescaled together whenever
+// a map's zoom changes. Each entry: {marker, kind:'tee'|'basket'}. Tee
+// markers also carry marker._rotationDeg so a rescale (setIcon) doesn't
+// lose the rotation the user set.
+let headerMapIcons = [];
+let mapZoomMapIcons = [];
+let holePlacementIcons = [];
+
+function rescaleIconMarkers(map, registry) {
+  const scale = scaleForZoom(map);
+  registry.forEach(entry => {
+    if (entry.kind === 'tee') {
+      entry.marker.setIcon(makeTeeDivIcon(entry.marker._rotationDeg || 0, scale));
+    } else {
+      entry.marker.setIcon(makeBasketIcon(scale));
+    }
   });
 }
 
@@ -326,6 +379,7 @@ function resetCourseCreationState() {
   holePlacementTeeMarker = null;
   holePlacementBasketMarker = null;
   allBasketMarkers = [];
+  holePlacementIcons = [];
   holeMarkersHistory = [];
   pendingCourseVisibility = 'private';
 
@@ -455,6 +509,7 @@ function launchHolePlacementWizard() {
   pendingHoleGeo = holePlacementHoles.map(() => ({ tee: null, basket: null, waypoints: [] }));
   holeMarkersHistory = holePlacementHoles.map(() => ({}));
   allBasketMarkers = [];
+  holePlacementIcons = [];
   holePlacementIndex = 0;
 
   document.getElementById('hole-placement-modal').classList.add('active');
@@ -469,6 +524,7 @@ function launchHolePlacementWizard() {
       detectRetina: true
     }).addTo(holePlacementMap);
     holePlacementMap.on('click', handleHolePlacementMapClick);
+    holePlacementMap.on('zoomend', () => rescaleIconMarkers(holePlacementMap, holePlacementIcons));
   }
   holePlacementMap.setView(center, 18);
   setTimeout(() => holePlacementMap.invalidateSize(), 50);
@@ -489,29 +545,28 @@ function beginHoleTee(index) {
 
 function updateMarkerHoleLabel(marker, holeNumbers) {
   const text = holeNumbers.join(', ');
-  if (marker.getTooltip()) {
-    marker.setTooltipContent(text);
-  } else {
-    marker.bindTooltip(text, {
-      permanent: true,
-      direction: 'right',
-      offset: [12, 0],
-      className: 'hole-number-label'
-    });
-  }
+  // Always unbind + rebind fresh instead of mutating an already-open
+  // permanent tooltip in place — setTooltipContent() on a tooltip that's
+  // already showing (e.g. after reusing a basket for another hole)
+  // doesn't reliably redraw, leaving the old number visible.
+  marker.unbindTooltip();
+  marker.bindTooltip(text, {
+    permanent: true,
+    direction: 'right',
+    offset: [12, 0],
+    className: 'hole-number-label'
+  });
+  if (marker._map) marker.openTooltip();
 }
 
 function handleHolePlacementMapClick(e) {
   const currentHoleNumber = holePlacementHoles[holePlacementIndex].number;
 
   if (holePlacementSubStep === 'tee-tap') {
-    const teeDivIcon = L.divIcon({
-      html: '<img src="' + TEE_PAD_ICON_URL + '" style="width:22px;height:44px;display:block;transform:rotate(0deg);"/>',
-      className: 'placement-div-icon',
-      iconSize: [22, 44],
-      iconAnchor: [11, 22]
-    });
-    holePlacementTeeMarker = L.marker(e.latlng, { icon: teeDivIcon, draggable: true }).addTo(holePlacementMap);
+    const scale = scaleForZoom(holePlacementMap);
+    holePlacementTeeMarker = L.marker(e.latlng, { icon: makeTeeDivIcon(0, scale), draggable: true }).addTo(holePlacementMap);
+    holePlacementTeeMarker._rotationDeg = 0;
+    holePlacementIcons.push({ marker: holePlacementTeeMarker, kind: 'tee' });
     updateMarkerHoleLabel(holePlacementTeeMarker, [currentHoleNumber]);
     holePlacementRotation = 0;
     holePlacementSubStep = 'tee-confirm';
@@ -519,7 +574,9 @@ function handleHolePlacementMapClick(e) {
     applyTeeRotationToMarker();
 
   } else if (holePlacementSubStep === 'basket-tap') {
-    holePlacementBasketMarker = L.marker(e.latlng, { icon: makeBasketIcon(), draggable: true }).addTo(holePlacementMap);
+    const scale = scaleForZoom(holePlacementMap);
+    holePlacementBasketMarker = L.marker(e.latlng, { icon: makeBasketIcon(scale), draggable: true }).addTo(holePlacementMap);
+    holePlacementIcons.push({ marker: holePlacementBasketMarker, kind: 'basket' });
     updateMarkerHoleLabel(holePlacementBasketMarker, [currentHoleNumber]);
     holePlacementSubStep = 'basket-confirm';
     updateHolePlacementUI();
@@ -545,6 +602,7 @@ function handleTeeRotationInput(e) {
 
 function applyTeeRotationToMarker() {
   if (!holePlacementTeeMarker) return;
+  holePlacementTeeMarker._rotationDeg = holePlacementRotation;
   const el = holePlacementTeeMarker.getElement();
   if (!el) return;
   const img = el.querySelector('img');
@@ -863,8 +921,14 @@ function startRound(course) {
   // Only bring up the map if this course actually has tee/basket data saved.
   // Otherwise leave the plain header image showing — an empty satellite
   // view with nothing plotted on it isn't useful.
+  // Wrapped in try/catch: a bug in the map/overlay code should never be
+  // able to prevent the scorecard itself from rendering.
   if (hasCourseMap) {
-    showHeaderMap();
+    try {
+      showHeaderMap();
+    } catch (err) {
+      console.error('showHeaderMap failed, continuing without the map:', err);
+    }
   }
   buildScorecard(currentRound);
 }
@@ -881,13 +945,15 @@ function exitRound() {
   if (headerMap) {
     headerMap.remove();
     headerMap = null;
-    headerMapMarker = null;
   }
+  headerMapIcons = [];
+  headerMapLines = [];
   if (mapZoomMap) {
     mapZoomMap.remove();
     mapZoomMap = null;
-    mapZoomMarker = null;
   }
+  mapZoomMapIcons = [];
+  mapZoomMapLines = [];
 }
 
 // Finds which hole the player is currently on (first hole missing a score
@@ -925,24 +991,23 @@ function followMapToCurrentHole() {
   const point = getHoleCenter(hole);
   if (!point) return;
   headerMap.setView([point.lat, point.lng], 18);
+  colorCurrentHoleLine(headerMapLines, hole.number);
 }
 
-function renderCourseOverlay(map, holes) {
+function renderCourseOverlay(map, holes, registry, lineRegistry) {
   const bounds = [];
+  const scale = scaleForZoom(map);
   holes.forEach(h => {
     if (h.tee) {
-      const teeDivIcon = L.divIcon({
-        html: '<img src="' + TEE_PAD_ICON_URL + '" style="width:22px;height:44px;display:block;transform:rotate(' + (h.tee.rotation || 0) + 'deg);"/>',
-        className: 'placement-div-icon',
-        iconSize: [22, 44],
-        iconAnchor: [11, 22]
-      });
-      const m = L.marker([h.tee.lat, h.tee.lng], { icon: teeDivIcon }).addTo(map);
+      const m = L.marker([h.tee.lat, h.tee.lng], { icon: makeTeeDivIcon(h.tee.rotation || 0, scale) }).addTo(map);
+      m._rotationDeg = h.tee.rotation || 0;
+      if (registry) registry.push({ marker: m, kind: 'tee' });
       m.bindTooltip(String(h.number), { permanent: true, direction: 'right', offset: [10, 0], className: 'hole-number-label' });
       bounds.push([h.tee.lat, h.tee.lng]);
     }
     if (h.basket) {
-      const m = L.marker([h.basket.lat, h.basket.lng], { icon: makeBasketIcon() }).addTo(map);
+      const m = L.marker([h.basket.lat, h.basket.lng], { icon: makeBasketIcon(scale) }).addTo(map);
+      if (registry) registry.push({ marker: m, kind: 'basket' });
       m.bindTooltip(String(h.number), { permanent: true, direction: 'right', offset: [10, 0], className: 'hole-number-label' });
       bounds.push([h.basket.lat, h.basket.lng]);
     }
@@ -950,11 +1015,21 @@ function renderCourseOverlay(map, holes) {
       const pts = [[h.tee.lat, h.tee.lng]];
       (h.waypoints || []).forEach(w => pts.push([w.lat, w.lng]));
       pts.push([h.basket.lat, h.basket.lng]);
-      L.polyline(pts, { color: '#F2B705', weight: 2, opacity: 0.85 }).addTo(map);
+      const pl = L.polyline(pts, { color: '#F2B705', weight: 2, opacity: 0.85 }).addTo(map);
+      if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl });
     }
   });
   return bounds;
 }
+
+// Colors the current hole's line red, every other hole's line yellow.
+function colorCurrentHoleLine(lineRegistry, currentHoleNumber) {
+  lineRegistry.forEach(entry => {
+    entry.polyline.setStyle({ color: entry.holeNumber === currentHoleNumber ? '#e63946' : '#F2B705' });
+  });
+}
+
+
 
 /* ---------- Header map ---------- */
 
@@ -977,23 +1052,32 @@ function showHeaderMap() {
       zoomAnimation: false,
       fadeAnimation: false,
       doubleClickZoom: false,
-      zoomSnap: 0.25,
-      zoomDelta: 0.5
+      zoomSnap: 1,
+      zoomDelta: 1,
+      maxZoom: 21
     });
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Tiles &copy; Esri',
-      detectRetina: true
+      maxZoom: 21,
+      maxNativeZoom: 19,
+      attribution: 'Tiles &copy; Esri'
     }).addTo(headerMap);
 
+    // Compute the current hole BEFORE overlay rendering, so centering
+    // below still works even if renderCourseOverlay throws.
+    const currentHole = currentRound && currentRound.hasCourseMap ? getCurrentHole(currentRound) : null;
+
     if (currentRound && currentRound.hasCourseMap) {
-      renderCourseOverlay(headerMap, currentRound.holes);
+      try {
+        headerMapIcons = [];
+        headerMapLines = [];
+        renderCourseOverlay(headerMap, currentRound.holes, headerMapIcons, headerMapLines);
+        headerMap.on('zoomend', () => rescaleIconMarkers(headerMap, headerMapIcons));
+        if (currentHole) colorCurrentHoleLine(headerMapLines, currentHole.number);
+      } catch (err) {
+        console.error('Course overlay rendering failed:', err);
+      }
     }
 
-    // Center tightly on the CURRENT hole (same fixed zoom the course-setup
-    // map uses) rather than fitBounds-ing the whole course — fitting every
-    // hole into one view is what was forcing the zoomed-way-out result.
-    const currentHole = currentRound && currentRound.hasCourseMap ? getCurrentHole(currentRound) : null;
     const holeCenterPoint = getHoleCenter(currentHole);
     const holeCenter = holeCenterPoint ? [holeCenterPoint.lat, holeCenterPoint.lng] : null;
 
@@ -1020,11 +1104,6 @@ function hideHeaderMap() {
   const mapEl = document.getElementById('header-map');
   if (mapEl) mapEl.classList.add('hide');
   if (imgEl) imgEl.classList.remove('hide');
-
-  if (headerMapWatchId != null && navigator.geolocation) {
-    navigator.geolocation.clearWatch(headerMapWatchId);
-    headerMapWatchId = null;
-  }
 }
 
 function wireDoubleTap(el, callback) {
@@ -1054,26 +1133,32 @@ function openMapZoomModal() {
 
   const isNewMap = !mapZoomMap;
   if (isNewMap) {
-    mapZoomMap = L.map('map-zoom-map', { zoomAnimation: false, fadeAnimation: false, zoomControl: true, zoomSnap: 0.25, zoomDelta: 0.5 });
+    mapZoomMap = L.map('map-zoom-map', {
+      zoomAnimation: false,
+      fadeAnimation: false,
+      zoomControl: true,
+      zoomSnap: 1,
+      zoomDelta: 1,
+      maxZoom: 22
+    });
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: 'Tiles &copy; Esri',
-      detectRetina: true
+      maxZoom: 22,
+      maxNativeZoom: 19,
+      attribution: 'Tiles &copy; Esri'
     }).addTo(mapZoomMap);
 
-    // Mirror the same tee/basket/path overlay shown on the small map —
-    // this was previously missing entirely from the enlarged view.
+    // Mirror the same tee/basket/path overlay shown on the small map.
     if (currentRound && currentRound.hasCourseMap) {
-      renderCourseOverlay(mapZoomMap, currentRound.holes);
-    }
-  }
-
-  if (headerMapMarker) {
-    const markerLatLng = headerMapMarker.getLatLng();
-    if (!mapZoomMarker) {
-      mapZoomMarker = L.marker(markerLatLng).addTo(mapZoomMap);
-    } else {
-      mapZoomMarker.setLatLng(markerLatLng);
+      try {
+        mapZoomMapIcons = [];
+        mapZoomMapLines = [];
+        renderCourseOverlay(mapZoomMap, currentRound.holes, mapZoomMapIcons, mapZoomMapLines);
+        mapZoomMap.on('zoomend', () => rescaleIconMarkers(mapZoomMap, mapZoomMapIcons));
+        const currentHole = getCurrentHole(currentRound);
+        if (currentHole) colorCurrentHoleLine(mapZoomMapLines, currentHole.number);
+      } catch (err) {
+        console.error('Enlarged map overlay rendering failed:', err);
+      }
     }
   }
 
