@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=13"/>
+  <link rel="stylesheet" href="css/styles.css?v=19"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -250,20 +250,31 @@
   <!-- Main Controls -->
 
 <section id="controls-section" class="row">
-  <div class="col-12">
-    <select id="course-select" onchange="enableSelectCourse()">
-      <option value="">Select a course</option>
-    </select>
+  <div class="col-12 button-row">
+    <button id="start-round-btn" class="btn btn--big btn--purple-blue">Start New Round</button>
+    <button id="add-course-btn" class="btn btn--big btn--purple-blue">Add Course</button>
   </div>
   <div class="col-12 button-row">
-    <button id="select-course-btn" class="btn btn--big btn--purple-blue">Select Course</button>
-    <button id="new-course-btn" class="btn btn--big btn--purple-blue">New Course</button>
-  </div>
-  <div class="col-12 button-row">
-    <button id="delete-course-btn" class="btn btn--big btn--purple-blue">Delete Course</button>
-    <button id="clear-name-btn" class="btn btn--big btn--purple-blue">Clear Name</button>
+    <button id="field-work-btn" class="btn btn--big btn--purple-blue">Field Work</button>
+    <button id="add-disc-btn" class="btn btn--big btn--purple-blue">Add Disc</button>
   </div>
 </section>
+
+<!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
+     and the "Start New Round" button (Select mode). -->
+<div id="course-list-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
+    <h4>Courses</h4>
+    <select id="course-list-select" style="width:100%;margin-bottom:0.75rem;">
+      <option value="">Select a course</option>
+    </select>
+    <div style="text-align:center;">
+      <button id="course-list-select-btn" class="paper-btn">Select Course</button>
+      <button id="course-list-delete-btn" class="paper-btn hide">Delete Course</button>
+      <button id="course-list-close-btn" class="paper-btn">Close</button>
+    </div>
+  </div>
+</div>
 
   <section id="course-actions-section" class="row">
     
@@ -295,7 +306,7 @@
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
   <script src="js/db.js?v=2"></script>
-  <script src="js/main.js?v=44"></script>
+  <script src="js/main.js?v=48"></script>
   <script src="js/namePrompt.js"></script>
 
 
@@ -332,19 +343,42 @@
 
   <!-- Bottom Docked Menu -->
   <nav id="bottom-menu">
-    <ul class="bottom-menu-list">
-      <li><a href="#" id="nav-home-link">Home</a></li>
-      <li><a href="#" id="nav-courses-link">Courses</a></li>
-      <li><a href="#" id="nav-stats-link">Stats</a></li>
-    </ul>
-  <div class="toggle-switch">
-    <input type="checkbox" id="lock-toggle">
-    <label for="lock-toggle">
-      <span class="slider"></span>
-    </label>
-  </div>
+    <button id="hamburger-menu-btn" class="bottom-menu-icon-btn" aria-label="Menu" type="button">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
 
+    <div class="bottom-menu-center">
+      <a href="#" id="nav-home-link" class="bottom-menu-icon-btn" aria-label="Home">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M12 3 L3 10 L5 10 L5 21 L19 21 L19 10 L21 10 Z"/>
+          <rect x="10" y="15" width="4" height="6"/>
+        </svg>
+      </a>
+    </div>
+
+    <div class="toggle-switch">
+      <input type="checkbox" id="lock-toggle">
+      <label for="lock-toggle">
+        <span class="slider"></span>
+      </label>
+    </div>
   </nav>
+
+  <!-- Hamburger Menu Modal -->
+  <div id="hamburger-menu-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:320px;width:85%;text-align:left;">
+      <h4 style="text-align:center;">Menu</h4>
+      <button id="menu-account-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Account</button>
+      <button id="menu-courses-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Courses</button>
+      <button id="menu-stats-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Stats</button>
+      <button id="menu-discs-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Discs</button>
+      <button id="menu-close-btn" class="paper-btn" style="width:100%;">Close</button>
+    </div>
+  </div>
 </body>
 
 </html>

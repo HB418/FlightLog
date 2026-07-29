@@ -645,12 +645,18 @@ body.dark-mode #clear-name-modal .custom-modal-content h4 {
   position: fixed;
   bottom: 0;
   left: 0;
-  width: 100%;
+  right: 0;
   background-color: var(--dark-teal);
   z-index: 1000;
   padding: 0.4rem 0.75rem;
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
-  display: flex;
+  /* CSS Grid instead of flexbox/absolute-positioning: with three
+     columns (1fr auto 1fr), the middle column is mathematically
+     guaranteed to sit at the true center of the whole bar, regardless
+     of how wide the hamburger button vs. toggle switch are — no
+     percentage-of-parent-height/width math to get wrong. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 0.5rem;
 }
@@ -658,20 +664,40 @@ body.dark-mode #bottom-menu {
   background-color: #3F3F3F;
 }
 
-.bottom-menu-list {
+.bottom-menu-center {
   display: flex;
-  flex: 1 1 auto;
-  justify-content: space-around;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  min-width: 0;
+  justify-content: center;
 }
-.bottom-menu-list li a {
+#hamburger-menu-btn {
+  justify-self: start;
+}
+#bottom-menu .toggle-switch {
+  justify-self: end;
+}
+.bottom-menu-icon-btn {
+  background: none;
+  border: none;
+  padding: 0.3rem;
+  margin: 0;
+  cursor: pointer;
   color: var(--mustard);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
   text-decoration: none;
-  font-weight: bold;
-  font-size: 0.85rem;
+  background-image: none;
+}
+#nav-home-link.bottom-menu-icon-btn,
+#hamburger-menu-btn.bottom-menu-icon-btn {
+  color: var(--mustard) !important;
+}
+body.dark-mode #nav-home-link.bottom-menu-icon-btn,
+body.dark-mode #hamburger-menu-btn.bottom-menu-icon-btn {
+  color: var(--orange) !important;
+}
+body.dark-mode .bottom-menu-icon-btn {
+  color: var(--orange);
 }
 
 /* Toggle switch: a normal flex item, never absolutely positioned,
@@ -699,7 +725,7 @@ body.dark-mode #bottom-menu {
 #bottom-menu .toggle-switch .slider {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--orange);
+  background-color: var(--mustard);
   border-radius: 20px;
   transition: background-color 0.4s;
 }
@@ -715,19 +741,24 @@ body.dark-mode #bottom-menu {
   transition: transform 0.4s;
 }
 #lock-toggle:checked + label .slider {
-  background-color: var(--mustard);
+  background-color: var(--orange);
 }
 #lock-toggle:checked + label .slider:before {
   transform: translateX(20px);
 }
 
-/* Desktop: keep the menu centered with a comfortable max-width */
+/* Desktop: keep the menu centered with a comfortable max-width.
+   #bottom-menu is position:fixed with width:100% — for max-width +
+   margin:auto centering to work on a fixed element, it also needs
+   left:0 and right:0 (so the browser has left/right edges to center
+   between) and width:auto instead of the base rule's width:100%. */
 @media (min-width: 768px) {
   #bottom-menu {
-    justify-content: center;
-  }
-  #bottom-menu .bottom-menu-list {
-    flex: 0 1 500px;
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: 500px;
+    margin: 0 auto;
   }
 }
 

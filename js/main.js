@@ -101,18 +101,32 @@ let pendingCourseVisibility = 'private';
 document.addEventListener('DOMContentLoaded', function () {
   loadCourseOptions();
 
-  document.getElementById('select-course-btn')?.addEventListener('click', async () => {
-    const select = document.getElementById('course-select');
+  document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
+  document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
+  document.getElementById('field-work-btn')?.addEventListener('click', () => {
+    showGenericModal('Field Work is coming soon.');
+  });
+  document.getElementById('add-disc-btn')?.addEventListener('click', () => {
+    showGenericModal('Add Disc is coming soon.');
+  });
+
+  document.getElementById('course-list-close-btn')?.addEventListener('click', () => {
+    document.getElementById('course-list-modal').classList.remove('active');
+  });
+
+  document.getElementById('course-list-select-btn')?.addEventListener('click', async () => {
+    const select = document.getElementById('course-list-select');
     if (!select || select.options.length <= 1) { showSelectCourseEmptyModal(); return; }
     if (!select.value) { document.getElementById('no-course-modal').classList.add('active'); return; }
     const db = await openDiscTallyDB();
     const course = await getCourseById(db, Number(select.value));
     if (!course) { showGenericModal('Course not found.'); return; }
+    document.getElementById('course-list-modal').classList.remove('active');
     startRound(course);
   });
 
-  document.getElementById('delete-course-btn')?.addEventListener('click', async () => {
-    const select = document.getElementById('course-select');
+  document.getElementById('course-list-delete-btn')?.addEventListener('click', async () => {
+    const select = document.getElementById('course-list-select');
     if (!select || select.options.length <= 1) { showDeleteCourseEmptyModal(); return; }
     if (!select.value) { document.getElementById('no-course-modal').classList.add('active'); return; }
     const courseId = Number(select.value);
@@ -127,9 +141,7 @@ document.addEventListener('DOMContentLoaded', function () {
     );
   });
 
-  document.getElementById('new-course-btn')?.addEventListener('click', openNewCourseModal);
 
-  // Screen 1: Course Info
   document.getElementById('nc-info-cancel-btn')?.addEventListener('click', closeNewCourseModal);
   document.getElementById('nc-info-next-btn')?.addEventListener('click', handleNcInfoNext);
 
@@ -228,15 +240,31 @@ document.addEventListener('DOMContentLoaded', function () {
     e.preventDefault();
     if (currentRound) { exitRound(); }
   });
-  document.getElementById('nav-courses-link')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentRound) exitRound();
-    document.getElementById('course-select')?.focus();
+
+  document.getElementById('hamburger-menu-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.add('active');
   });
-  document.getElementById('nav-stats-link')?.addEventListener('click', async (e) => {
-    e.preventDefault();
+  document.getElementById('menu-close-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+  });
+  document.getElementById('menu-account-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+    showGenericModal('Account is coming soon.');
+  });
+  document.getElementById('menu-courses-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+    if (currentRound) exitRound();
+    openCourseListModal('delete');
+  });
+  document.getElementById('menu-stats-btn')?.addEventListener('click', async () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
     await openStatsModal();
   });
+  document.getElementById('menu-discs-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+    showGenericModal('Discs is coming soon.');
+  });
+
   document.getElementById('close-stats-modal-btn')?.addEventListener('click', () => {
     document.getElementById('stats-modal').classList.remove('active');
   });
@@ -315,7 +343,7 @@ function showGenericModal(message) {
 async function loadCourseOptions() {
   const db = await openDiscTallyDB();
   const courses = await getAllCourses(db);
-  const sel = document.getElementById('course-select');
+  const sel = document.getElementById('course-list-select');
   if (!sel) return;
   sel.innerHTML = '<option value="">Select a course</option>';
   courses.forEach(c => {
@@ -324,14 +352,13 @@ async function loadCourseOptions() {
     o.textContent = c.name || `Course ${c.id}`;
     sel.appendChild(o);
   });
-  enableSelectCourse();
 }
 
-function enableSelectCourse() {
-  const selectBtn = document.getElementById('select-course-btn');
-  const deleteBtn = document.getElementById('delete-course-btn');
-  if (selectBtn) selectBtn.disabled = false;
-  if (deleteBtn) deleteBtn.disabled = false;
+async function openCourseListModal(mode) {
+  await loadCourseOptions();
+  const deleteBtn = document.getElementById('course-list-delete-btn');
+  if (deleteBtn) deleteBtn.classList.toggle('hide', mode !== 'delete');
+  document.getElementById('course-list-modal').classList.add('active');
 }
 
 /* ---------- New Course modal (3-screen wizard) ---------- */
