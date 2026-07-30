@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=19"/>
+  <link rel="stylesheet" href="css/styles.css?v=33"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -258,6 +258,9 @@
     <button id="field-work-btn" class="btn btn--big btn--purple-blue">Field Work</button>
     <button id="add-disc-btn" class="btn btn--big btn--purple-blue">Add Disc</button>
   </div>
+  <div class="col-12 button-row">
+    <button id="admin-map-entry-btn" class="btn btn--big btn--purple-blue admin-only-btn">Admin Map Entry</button>
+  </div>
 </section>
 
 <!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
@@ -265,9 +268,7 @@
 <div id="course-list-modal" class="custom-modal">
   <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
     <h4>Courses</h4>
-    <select id="course-list-select" style="width:100%;margin-bottom:0.75rem;">
-      <option value="">Select a course</option>
-    </select>
+    <div id="course-list-items" style="max-height:320px;overflow-y:auto;border:1px solid #ccc;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
     <div style="text-align:center;">
       <button id="course-list-select-btn" class="paper-btn">Select Course</button>
       <button id="course-list-delete-btn" class="paper-btn hide">Delete Course</button>
@@ -305,8 +306,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
-  <script src="js/db.js?v=2"></script>
-  <script src="js/main.js?v=48"></script>
+  <script src="js/db.js?v=3"></script>
+  <script src="js/main.js?v=69"></script>
   <script src="js/namePrompt.js"></script>
 
 
@@ -377,6 +378,90 @@
       <button id="menu-stats-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Stats</button>
       <button id="menu-discs-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Discs</button>
       <button id="menu-close-btn" class="paper-btn" style="width:100%;">Close</button>
+    </div>
+  </div>
+
+  <!-- Admin Map Entry Panel (desktop-only, full-screen) -->
+  <div id="admin-panel">
+    <!-- List screen -->
+    <div id="admin-list-screen">
+      <div class="admin-panel-header">
+        <h3>Admin Map Entry</h3>
+        <button id="admin-panel-close-btn" class="paper-btn">Close</button>
+      </div>
+      <button id="admin-new-course-btn" class="paper-btn" style="margin-bottom:1rem;">+ New Course</button>
+      <div id="admin-course-list"></div>
+    </div>
+
+    <!-- Editor screen -->
+    <div id="admin-editor-screen" class="hide">
+      <div class="admin-panel-header">
+        <h3 id="admin-editor-title">New Course</h3>
+      </div>
+
+      <div class="admin-editor-split">
+        <div class="admin-editor-left">
+          <div style="margin-bottom:0.75rem;">
+            <label for="admin-course-name">Course Name</label>
+            <input type="text" id="admin-course-name" style="width:100%;"/>
+          </div>
+
+          <label for="admin-location-search">Find Location on Map</label>
+          <div style="display:flex;gap:0.5rem;margin-bottom:0.25rem;">
+            <input type="text" id="admin-location-search" placeholder="Address, town, or course name" style="flex:1;"/>
+            <button type="button" id="admin-find-location-btn" class="paper-btn">Find</button>
+          </div>
+          <div id="admin-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.75rem;"></div>
+
+          <label for="admin-course-logo-input">Course Logo</label>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:nowrap;">
+            <img id="admin-course-logo-preview" src="" alt="" class="hide" style="width:64px;height:64px;object-fit:cover;border-radius:0.4rem;border:1px solid #ccc;flex:0 0 auto;"/>
+            <label for="admin-course-logo-input" class="paper-btn" style="cursor:pointer;margin:0;">Upload Logo</label>
+            <input type="file" id="admin-course-logo-input" accept="image/*" style="display:none;"/>
+            <button type="button" id="admin-remove-logo-btn" class="paper-btn hide">Remove</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <select id="admin-hole-count" style="width:70px;"></select>
+            <label for="admin-hole-count" style="margin-bottom:0;white-space:nowrap;">Number of Holes</label>
+          </div>
+
+          <p style="font-size:0.8rem;">Check a hole below, then use the buttons above the map to set its tee/basket/waypoints.</p>
+          <div id="admin-holes-container"></div>
+
+          <div class="admin-editor-left-actions">
+            <button id="admin-save-course-btn" class="paper-btn">Save</button>
+            <button id="admin-editor-back-btn" class="paper-btn">Back to List</button>
+          </div>
+        </div>
+        <div class="admin-editor-right">
+          <div id="admin-map-toolbar">
+            <span id="admin-selected-hole-label">No hole selected</span>
+            <div class="admin-map-toolbar-buttons">
+              <button type="button" id="admin-set-tee-btn" class="paper-btn">Set Tee</button>
+              <button type="button" id="admin-set-basket-btn" class="paper-btn">Set Basket</button>
+              <button type="button" id="admin-add-waypoint-btn" class="paper-btn">Add Waypoint</button>
+              <button type="button" id="admin-clear-waypoints-btn" class="paper-btn">Clear Waypoints</button>
+              <label for="admin-rotation-slider" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>
+              <input type="range" id="admin-rotation-slider" min="-180" max="180" value="0"/>
+              <span class="admin-toolbar-sep"></span>
+              <label for="admin-ref-image-opacity" style="font-size:0.8rem;white-space:nowrap;">Ref. opacity:</label>
+              <input type="range" id="admin-ref-image-opacity" min="0" max="100" value="50"/>
+              <button type="button" id="admin-remove-ref-image-btn" class="paper-btn hide">Remove Ref.</button>
+              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
+                <input type="checkbox" id="admin-lock-map-checkbox"/> Lock map
+              </label>
+              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
+                <input type="checkbox" id="admin-lock-ref-checkbox"/> Lock reference
+              </label>
+            </div>
+          </div>
+          <div id="admin-map-wrapper">
+            <div id="admin-map"></div>
+            <img id="admin-ref-image-overlay" class="hide" alt=""/>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </body>

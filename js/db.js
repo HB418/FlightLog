@@ -44,6 +44,15 @@ function getCourseById(db, id) {
   });
 }
 
+function updateCourse(db, course) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('courses', 'readwrite');
+    const req = tx.objectStore('courses').put(course);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
 function getAllCourses(db) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('courses', 'readonly');
