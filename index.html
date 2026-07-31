@@ -10,19 +10,50 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=33"/>
+  <link rel="stylesheet" href="css/styles.css?v=37"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
 </head>
 <body class="container">
-<!-- Welcome Modal -->
+<!-- Welcome / Sign Up Modal -->
 <div id="welcome-modal" class="custom-modal">
   <div class="custom-modal-content">
     <h4>Welcome!</h4>
-    <p>Please enter your name to get started:</p>
-    <input type="text" id="name-input" placeholder="Your name"/>
-    <button id="save-name-btn" class="paper-btn">Save</button>
+    <p>Create your profile to get started. This is stored on this device only — there's no server behind it yet.</p>
+    <label for="signup-name-input">Name</label>
+    <input type="text" id="signup-name-input" placeholder="Your name"/>
+    <label for="signup-state-select">State</label>
+    <select id="signup-state-select"></select>
+    <label for="signup-email-input">Email</label>
+    <input type="email" id="signup-email-input" placeholder="you@example.com"/>
+    <label for="signup-password-input">Password</label>
+    <input type="password" id="signup-password-input" placeholder="Password"/>
+    <label for="signup-password-confirm-input">Confirm Password</label>
+    <input type="password" id="signup-password-confirm-input" placeholder="Confirm password"/>
+    <div class="modal-remember-row">
+      <input type="checkbox" id="signup-remember-checkbox"/>
+      <label for="signup-remember-checkbox" style="display:inline;margin:0;">Keep me signed in on this device</label>
+    </div>
+    <div id="signup-status" class="modal-status-text"></div>
+    <button id="save-signup-btn" class="paper-btn">Sign Up</button>
+  </div>
+</div>
+
+<!-- Sign In Modal (shown on return visits unless "keep me signed in" was checked) -->
+<div id="signin-modal" class="custom-modal">
+  <div class="custom-modal-content">
+    <h4>Sign In</h4>
+    <label for="signin-email-input">Email</label>
+    <input type="email" id="signin-email-input" placeholder="you@example.com"/>
+    <label for="signin-password-input">Password</label>
+    <input type="password" id="signin-password-input" placeholder="Password"/>
+    <div class="modal-remember-row">
+      <input type="checkbox" id="signin-remember-checkbox"/>
+      <label for="signin-remember-checkbox" style="display:inline;margin:0;">Keep me signed in on this device</label>
+    </div>
+    <div id="signin-status" class="modal-status-text"></div>
+    <button id="save-signin-btn" class="paper-btn">Sign In</button>
   </div>
 </div>
   <!-- Header -->
@@ -307,8 +338,12 @@
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
   <script src="js/db.js?v=3"></script>
-  <script src="js/main.js?v=69"></script>
-  <script src="js/namePrompt.js"></script>
+  <script src="js/map-icons.js?v=2"></script>
+  <script src="js/course-wizard.js?v=1"></script>
+  <script src="js/admin-panel.js?v=1"></script>
+  <script src="js/round.js?v=2"></script>
+  <script src="js/main.js?v=81"></script>
+  <script src="js/namePrompt.js?v=5"></script>
 
 
 </div>
@@ -378,6 +413,59 @@
       <button id="menu-stats-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Stats</button>
       <button id="menu-discs-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Discs</button>
       <button id="menu-close-btn" class="paper-btn" style="width:100%;">Close</button>
+    </div>
+  </div>
+
+  <!-- Account Modal -->
+  <div id="account-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:360px;width:90%;text-align:left;">
+      <h4 style="text-align:center;">Account</h4>
+
+      <!-- Default view: read-only info summary -->
+      <div id="account-view-section">
+        <div class="account-info-row"><span class="account-info-label">Name</span><span id="account-view-name" class="account-info-value"></span></div>
+        <div class="account-info-row"><span class="account-info-label">State</span><span id="account-view-state" class="account-info-value"></span></div>
+        <div class="account-info-row"><span class="account-info-label">Email</span><span id="account-view-email" class="account-info-value"></span></div>
+        <div class="account-action-row">
+          <button id="account-edit-profile-btn" class="paper-btn">Edit Profile</button>
+          <button id="account-open-password-btn" class="paper-btn">Change Password</button>
+        </div>
+      </div>
+
+      <!-- Edit Profile form (hidden until "Edit Profile" is clicked) -->
+      <div id="account-edit-profile-section" class="hide">
+        <label for="account-name-input">Name</label>
+        <input type="text" id="account-name-input"/>
+        <label for="account-state-select">State</label>
+        <select id="account-state-select"></select>
+        <label for="account-email-input">Email</label>
+        <input type="email" id="account-email-input"/>
+        <div id="account-profile-status" class="modal-status-text"></div>
+        <div class="account-action-row">
+          <button id="save-account-profile-btn" class="paper-btn">Save</button>
+          <button id="cancel-account-profile-btn" class="paper-btn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Change Password form (hidden until "Change Password" is clicked) -->
+      <div id="account-edit-password-section" class="hide">
+        <label for="account-current-password-input">Current Password</label>
+        <input type="password" id="account-current-password-input"/>
+        <label for="account-new-password-input">New Password</label>
+        <input type="password" id="account-new-password-input"/>
+        <label for="account-new-password-confirm-input">Confirm New Password</label>
+        <input type="password" id="account-new-password-confirm-input"/>
+        <div id="account-password-status" class="modal-status-text"></div>
+        <div class="account-action-row">
+          <button id="save-account-password-btn" class="paper-btn">Save</button>
+          <button id="cancel-account-password-btn" class="paper-btn">Cancel</button>
+        </div>
+      </div>
+
+      <button id="account-close-btn" class="paper-btn" style="width:100%;margin-top:0.5rem;">Close</button>
+
+      <hr/>
+      <button id="delete-account-btn" class="paper-btn" style="width:100%;">Delete Account</button>
     </div>
   </div>
 
@@ -453,6 +541,9 @@
               </label>
               <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
                 <input type="checkbox" id="admin-lock-ref-checkbox"/> Lock reference
+              </label>
+              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
+                <input type="checkbox" id="admin-lock-numbers-checkbox"/> Lock numbers
               </label>
             </div>
           </div>

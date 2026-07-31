@@ -2,6 +2,16 @@
    FlightLog styles
    ============================================================ */
 
+.modal-status-text {
+  font-size: 0.8rem;
+  min-height: 1.1rem;
+  margin: 0.3rem 0 0.5rem;
+  color: var(--dark-teal);
+}
+body.dark-mode .modal-status-text {
+  color: var(--orange);
+}
+
 :root {
   --dark-teal: #026873;
   --teal: #038C7F;
@@ -47,7 +57,7 @@
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: var(--mustard);
+  color: #FFD400;
   font-weight: bold;
   font-size: 0.95rem;
   text-shadow: 0 0 3px #000, 0 0 3px #000;
@@ -55,6 +65,18 @@
 }
 .hole-number-label::before {
   display: none !important;
+}
+
+/* Draggable hole-number label (Admin panel + course-creation wizard) —
+   a small marker instead of a fixed tooltip, so it can be nudged if it
+   ends up overlapping something. Same look as the old fixed label. */
+.hole-number-label-draggable {
+  color: #FFD400;
+  font-weight: bold;
+  font-size: 0.95rem;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  white-space: nowrap;
+  cursor: move;
 }
 
 /* ===== Course List popup (scrollable, replaces the old <select>) ===== */
@@ -849,25 +871,116 @@ body.dark-mode #welcome-modal .custom-modal-content h4 {
 #welcome-modal .custom-modal-content p {
   margin: 1rem 0;
 }
-#welcome-modal #name-input {
+
+/* Compact, consistently-sized form fields for the auth/account modals —
+   PaperCSS's default input/select sizing is much too large for several
+   stacked fields in a modal-width box, which is what made these look
+   oversized and cramped. */
+#welcome-modal .custom-modal-content,
+#signin-modal .custom-modal-content,
+#account-modal .custom-modal-content {
+  max-width: 380px;
+  text-align: left;
+}
+#welcome-modal label,
+#signin-modal label,
+#account-modal label {
+  display: block;
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0.15rem;
+}
+#welcome-modal input,
+#welcome-modal select,
+#signin-modal input,
+#signin-modal select,
+#account-modal input,
+#account-modal select {
   width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+  height: 2.1rem;
   border: 1px solid var(--teal);
   border-radius: 0.25rem;
+  margin: 0;
 }
-body.dark-mode #welcome-modal #name-input {
+body.dark-mode #welcome-modal input,
+body.dark-mode #welcome-modal select,
+body.dark-mode #signin-modal input,
+body.dark-mode #signin-modal select,
+body.dark-mode #account-modal input,
+body.dark-mode #account-modal select {
   border-color: var(--mustard);
   background-color: #333;
   color: #fff;
 }
-#welcome-modal #save-name-btn {
-  background-color: var(--teal);
-  color: white;
-  width: 100%;
+#welcome-modal .modal-remember-row,
+#signin-modal .modal-remember-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
 }
-body.dark-mode #welcome-modal #save-name-btn {
-  background-color: var(--dark-teal);
+#welcome-modal .modal-remember-row input,
+#signin-modal .modal-remember-row input {
+  width: auto;
+  height: auto;
+}
+#account-modal hr {
+  margin: 1rem 0 0.5rem;
+  border: none;
+  border-top: 1px solid var(--teal);
+}
+body.dark-mode #account-modal hr {
+  border-top-color: var(--mustard);
+}
+#account-modal h5 {
+  margin: 0 0 0.4rem;
+  color: var(--dark-teal);
+  font-size: 0.95rem;
+}
+body.dark-mode #account-modal h5 {
+  color: var(--orange);
+}
+.account-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+body.dark-mode .account-info-row {
+  border-bottom-color: #444;
+}
+.account-info-label {
+  font-weight: bold;
+  color: var(--dark-teal);
+}
+body.dark-mode .account-info-label {
+  color: var(--orange);
+}
+.account-action-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.account-action-row .paper-btn {
+  flex: 1;
+}
+#account-modal .paper-btn,
+#welcome-modal .paper-btn,
+#signin-modal .paper-btn {
+  min-height: 0;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+#delete-account-btn {
+  background: #b3261e !important;
+}
+body.dark-mode #delete-account-btn {
+  background: #a8281f !important;
 }
 
 /* Welcome message (shown after name is saved) */
