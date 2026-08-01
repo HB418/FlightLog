@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=37"/>
+  <link rel="stylesheet" href="css/styles.css?v=40"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -290,9 +290,30 @@
     <button id="add-disc-btn" class="btn btn--big btn--purple-blue">Add Disc</button>
   </div>
   <div class="col-12 button-row">
+    <button id="putt-practice-btn" class="btn btn--big btn--purple-blue">Putt Practice</button>
+  </div>
+  <div class="col-12 button-row">
     <button id="admin-map-entry-btn" class="btn btn--big btn--purple-blue admin-only-btn">Admin Map Entry</button>
   </div>
 </section>
+
+<!-- Putt Practice: hole picker (shown after choosing a course) -->
+<div id="putt-practice-hole-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:340px;width:90%;text-align:left;">
+    <h4 style="text-align:center;">Select a Hole</h4>
+    <div id="putt-practice-hole-list" style="max-height:320px;overflow-y:auto;border:1px solid #ccc;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
+    <button id="putt-practice-hole-cancel-btn" class="paper-btn" style="width:100%;">Cancel</button>
+  </div>
+</div>
+
+<!-- Putt Practice: full-screen top-down basket view with C1/C2 circles -->
+<div id="putt-practice-screen">
+  <div class="admin-panel-header">
+    <h3 id="putt-practice-hole-label">Putt Practice</h3>
+    <button id="putt-practice-close-btn" class="paper-btn">Close</button>
+  </div>
+  <div id="putt-practice-map"></div>
+</div>
 
 <!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
      and the "Start New Round" button (Select mode). -->
@@ -338,12 +359,15 @@
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
   <script src="js/db.js?v=3"></script>
+  <script src="js/stock-courses.js?v=1"></script>
+  <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=2"></script>
   <script src="js/course-wizard.js?v=1"></script>
-  <script src="js/admin-panel.js?v=1"></script>
-  <script src="js/round.js?v=2"></script>
-  <script src="js/main.js?v=81"></script>
-  <script src="js/namePrompt.js?v=5"></script>
+  <script src="js/admin-panel.js?v=3"></script>
+  <script src="js/round.js?v=3"></script>
+  <script src="js/putt-practice.js?v=1"></script>
+  <script src="js/main.js?v=85"></script>
+  <script src="js/namePrompt.js?v=6"></script>
 
 
 </div>
@@ -412,7 +436,36 @@
       <button id="menu-courses-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Courses</button>
       <button id="menu-stats-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Stats</button>
       <button id="menu-discs-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Discs</button>
+      <button id="menu-ratings-info-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Flight/Course Ratings</button>
       <button id="menu-close-btn" class="paper-btn" style="width:100%;">Close</button>
+    </div>
+  </div>
+
+  <!-- Flight/Course Ratings Info Modal -->
+  <div id="ratings-info-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:440px;width:92%;text-align:left;max-height:80vh;overflow-y:auto;">
+      <h4 style="text-align:center;">Flight/Course Ratings</h4>
+
+      <p><strong>This is an original rating system, not PDGA's.</strong> PDGA's real ratings need a live field of rated players competing on the same day to work at all. Since a small app doesn't have that player pool, this system rates a course by its own physical layout instead, so a single player can get a real rating the very first time they play a course, alone.</p>
+
+      <h5>Course Rating</h5>
+      <p>Every course has a running difficulty multiplier. It starts at <strong>1.00</strong>. In the Admin panel, each hole can be flagged with any of four hazards: <strong>Dogleg, Water, Trees, Out of Bounds</strong>. Every checked hazard, on every hole, adds <strong>+0.05</strong> to the course's multiplier — cumulative across the whole course, never averaged or reset.</p>
+      <p><strong>Course Rating = (Total Length &times; Multiplier) &divide; Total Par</strong></p>
+
+      <h5>Baseline Score</h5>
+      <p>This is the score a hypothetical "1000-rated" player would be expected to shoot on this specific course. It starts from what the course's rating would be with zero hazards (length &divide; par alone), then converts the extra difficulty your hazards add into extra strokes (every 15 points of hazard difficulty = 1 extra stroke), added on top of par.</p>
+
+      <h5>Round Rating</h5>
+      <p>Every round you finish is rated against that course's Baseline Score, at 10 rating points per stroke:</p>
+      <p><strong>Round Rating = 1000 &minus; ((Your Score &minus; Baseline Score) &times; 10)</strong></p>
+      <p>Shoot exactly the baseline score &rarr; 1000. Beat it &rarr; above 1000. Come in over it &rarr; below 1000.</p>
+
+      <h5>Your Flight Rating</h5>
+      <p>Shown on your Account page and in Stats. It's a simple average of every Round Rating you've earned across every round you've played. It starts at <strong>1000</strong> before you've played anything.</p>
+
+      <p style="font-size:0.8rem;opacity:0.75;">Since this system doesn't compare against other real players the way PDGA/UDisc do, don't expect your number here to match a rating from those apps — it's measuring you against this app's own course-difficulty math, consistently, every time.</p>
+
+      <button id="ratings-info-close-btn" class="paper-btn" style="width:100%;">Close</button>
     </div>
   </div>
 
@@ -426,6 +479,7 @@
         <div class="account-info-row"><span class="account-info-label">Name</span><span id="account-view-name" class="account-info-value"></span></div>
         <div class="account-info-row"><span class="account-info-label">State</span><span id="account-view-state" class="account-info-value"></span></div>
         <div class="account-info-row"><span class="account-info-label">Email</span><span id="account-view-email" class="account-info-value"></span></div>
+        <div class="account-info-row"><span class="account-info-label">Flight Rating</span><span id="account-view-flight-rating" class="account-info-value"></span></div>
         <div class="account-action-row">
           <button id="account-edit-profile-btn" class="paper-btn">Edit Profile</button>
           <button id="account-open-password-btn" class="paper-btn">Change Password</button>
@@ -536,15 +590,19 @@
               <label for="admin-ref-image-opacity" style="font-size:0.8rem;white-space:nowrap;">Ref. opacity:</label>
               <input type="range" id="admin-ref-image-opacity" min="0" max="100" value="50"/>
               <button type="button" id="admin-remove-ref-image-btn" class="paper-btn hide">Remove Ref.</button>
-              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
-                <input type="checkbox" id="admin-lock-map-checkbox"/> Lock map
-              </label>
-              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
-                <input type="checkbox" id="admin-lock-ref-checkbox"/> Lock reference
-              </label>
-              <label style="font-size:0.8rem;white-space:nowrap;display:flex;align-items:center;gap:0.25rem;">
-                <input type="checkbox" id="admin-lock-numbers-checkbox"/> Lock numbers
-              </label>
+              <div class="admin-toolbar-lock-hazards-col">
+                <div class="admin-toolbar-lock-hazards-row">
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-lock-map-checkbox"/><span>Lock map</span></label>
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-lock-ref-checkbox"/><span>Lock reference</span></label>
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-lock-numbers-checkbox"/><span>Lock numbers</span></label>
+                </div>
+                <div class="admin-toolbar-lock-hazards-row">
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-dogleg"/><span>Dogleg</span></label>
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-water"/><span>Water</span></label>
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-trees"/><span>Trees</span></label>
+                  <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-ob"/><span>Out of Bounds</span></label>
+                </div>
+              </div>
             </div>
           </div>
           <div id="admin-map-wrapper">

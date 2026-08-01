@@ -482,19 +482,30 @@ async function finishRound() {
 
   const db = await openDiscTallyDB();
   const totalPar = currentRound.holes.reduce((sum, h) => sum + (Number(h.par) || 0), 0);
+  // A lightweight course-shaped object so the rating functions (which
+  // only ever read .holes) can use the same hole/hazard data this round
+  // was actually played on, even if the real course gets edited later.
+  const courseForRating = { holes: currentRound.holes };
+
   const roundRecord = {
     courseId: currentRound.courseId,
     courseName: currentRound.courseName,
     date: new Date().toISOString(),
     totalPar: totalPar,
     holes: currentRound.holes.map(h => ({ number: h.number, par: h.par })),
-    players: currentRound.players.map(p => ({
-      name: p.name,
-      total: computePlayerTotal(p),
-      scores: Object.entries(p.scores).map(([hole, strokes]) => ({ hole: Number(hole), strokes }))
-    }))
+    players: currentRound.players.map(p => {
+      const total = computePlayerTotal(p);
+      const roundRating = computeRoundRating(courseForRating, total);
+      return {
+        name: p.name,
+        total: total,
+        roundRating: roundRating,
+        scores: Object.entries(p.scores).map(([hole, strokes]) => ({ hole: Number(hole), strokes }))
+      };
+    })
   };
   await addRound(db, roundRecord);
+  await recomputeFlightRating();
 
   const summaryEl = document.getElementById('round-summary-content');
   summaryEl.innerHTML = currentRound.players.map(p => {
@@ -563,6 +574,7 @@ async function openStatsModal() {
   const overallAvg = overallDiffs.length ? (overallDiffs.reduce((s, v) => s + v, 0) / overallDiffs.length) : 0;
 
   let html = '<div class="stats-overall-block"><h5>Overall</h5>' +
+    '<div class="stats-round-row"><span>Flight Rating</span><span>' + getStoredFlightRating() + '</span></div>' +
     '<div class="stats-round-row"><span>Rounds Played</span><span>' + overallDiffs.length + '</span></div>' +
     '<div class="stats-round-row"><span>Average (to par)</span><span>' + formatDiff(overallAvg.toFixed(1)) + '</span></div>' +
     '</div>';

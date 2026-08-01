@@ -5,15 +5,17 @@
 
 let pendingConfirmCallback = null;
 let selectedCourseListId = null; // currently-selected course row in the course-list-modal
+let courseListMode = 'select';   // 'select' | 'delete' | 'putt-practice' — what the course-list-modal does when you pick a course
 
 document.addEventListener('DOMContentLoaded', function () {
-  loadCourseOptions();
+  seedStockCourses().then(loadCourseOptions);
 
   document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
   document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
   document.getElementById('field-work-btn')?.addEventListener('click', () => {
     showGenericModal('Field Work is coming soon.');
   });
+  document.getElementById('putt-practice-btn')?.addEventListener('click', () => openCourseListModal('putt-practice'));
   document.getElementById('add-disc-btn')?.addEventListener('click', () => {
     showGenericModal('Add Disc is coming soon.');
   });
@@ -170,6 +172,17 @@ document.addEventListener('DOMContentLoaded', function () {
       holeData.waypointMarkers = [];
     }
   });
+  HAZARD_TYPES.forEach(type => {
+    document.getElementById('admin-hazard-' + type)?.addEventListener('change', (e) => {
+      if (adminSelectedHole == null) {
+        e.target.checked = false;
+        showGenericModal('Check a hole first.');
+        return;
+      }
+      adminHoleHazards[adminSelectedHole] = adminHoleHazards[adminSelectedHole] || {};
+      adminHoleHazards[adminSelectedHole][type] = e.target.checked;
+    });
+  });
   document.getElementById('admin-rotation-slider')?.addEventListener('input', (e) => {
     if (adminSelectedHole == null) {
       console.warn('Tee facing slider: no hole is checked.');
@@ -207,7 +220,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const course = await getCourseById(db, selectedCourseListId);
     if (!course) { showGenericModal('Course not found.'); return; }
     document.getElementById('course-list-modal').classList.remove('active');
-    startRound(course);
+    if (courseListMode === 'putt-practice') {
+      openPuttPracticeHolePicker(course);
+    } else {
+      startRound(course);
+    }
   });
 
   document.getElementById('course-list-delete-btn')?.addEventListener('click', async () => {
@@ -349,6 +366,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('hamburger-menu-modal').classList.remove('active');
     showGenericModal('Discs is coming soon.');
   });
+  document.getElementById('menu-ratings-info-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+    document.getElementById('ratings-info-modal').classList.add('active');
+  });
+  document.getElementById('ratings-info-close-btn')?.addEventListener('click', () => {
+    document.getElementById('ratings-info-modal').classList.remove('active');
+  });
 
   document.getElementById('close-stats-modal-btn')?.addEventListener('click', () => {
     document.getElementById('stats-modal').classList.remove('active');
@@ -409,12 +433,14 @@ function getSelectedRoundIds() {
 async function clearAllStats() {
   const db = await openDiscTallyDB();
   await clearAllRounds(db);
+  await recomputeFlightRating();
   await openStatsModal();
 }
 
 async function deleteSelectedRounds(ids) {
   const db = await openDiscTallyDB();
   await deleteRounds(db, ids);
+  await recomputeFlightRating();
   await openStatsModal();
 }
 
@@ -459,7 +485,11 @@ async function loadCourseOptions() {
     nameEl.textContent = c.name || `Course ${c.id}`;
     const metaEl = document.createElement('span');
     metaEl.className = 'course-list-item-meta';
-    metaEl.textContent = (c.holes ? c.holes.length : 0) + ' holes';
+    const holeCount = c.holes ? c.holes.length : 0;
+    const totalPar = (c.holes || []).reduce((sum, h) => sum + (Number(h.par) || 0), 0);
+    const courseRating = computeCourseRating(c);
+    metaEl.textContent = holeCount + ' holes' + (totalPar ? (' \u00b7 Par ' + totalPar) : '') +
+      (courseRating != null ? (' \u00b7 Course Rating ' + courseRating.toFixed(1)) : '');
     info.appendChild(nameEl);
     info.appendChild(metaEl);
     item.appendChild(info);
@@ -476,6 +506,7 @@ async function loadCourseOptions() {
 }
 
 async function openCourseListModal(mode) {
+  courseListMode = mode;
   await loadCourseOptions();
   const deleteBtn = document.getElementById('course-list-delete-btn');
   if (deleteBtn) deleteBtn.classList.toggle('hide', mode !== 'delete');

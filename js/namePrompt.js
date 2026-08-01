@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('account-view-name').textContent = localStorage.getItem('userName') || '';
     document.getElementById('account-view-state').textContent = localStorage.getItem('userState') || '';
     document.getElementById('account-view-email').textContent = localStorage.getItem('userEmail') || '';
+    document.getElementById('account-view-flight-rating').textContent = getStoredFlightRating();
     document.getElementById('account-name-input').value = localStorage.getItem('userName') || '';
     document.getElementById('account-state-select').value = localStorage.getItem('userState') || '';
     document.getElementById('account-email-input').value = localStorage.getItem('userEmail') || '';

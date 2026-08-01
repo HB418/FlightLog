@@ -17,6 +17,7 @@ let adminRefImageScale = 1; // reference-overlay scale, controlled by mouse whee
 let adminRefImageOffsetX = 0; // reference-overlay position offset (px), controlled by dragging while locked
 let adminRefImageOffsetY = 0;
 let adminEditingLogoDataUrl = null; // pending logo (base64 data URL) for the admin editor
+let adminHoleHazards = {}; // { [holeNumber]: { dogleg, water, trees, ob } } — set via the shared toolbar checkboxes for whichever hole is selected
 
 function loadAdminRefImageFile(file) {
   const reader = new FileReader();
@@ -165,7 +166,11 @@ async function renderAdminCourseList() {
     }
 
     const label = document.createElement('span');
-    label.textContent = (course.name || 'Course ' + course.id) + ' (' + (course.holes || []).length + ' holes)';
+    const totalPar = (course.holes || []).reduce((sum, h) => sum + (Number(h.par) || 0), 0);
+    const courseRating = computeCourseRating(course);
+    label.textContent = (course.name || 'Course ' + course.id) + ' (' + (course.holes || []).length + ' holes' +
+      (totalPar ? (', Par ' + totalPar) : '') +
+      (courseRating != null ? (', Rating ' + courseRating.toFixed(1)) : '') + ')';
     const tag = document.createElement('span');
     tag.className = 'admin-course-tag';
     tag.textContent = course.source === 'admin' ? '[stock]' : '[user]';
@@ -297,17 +302,25 @@ function selectAdminHole(holeNumber) {
   if (holeNumber == null) {
     label.textContent = 'No hole selected';
     slider.value = 0;
+    HAZARD_TYPES.forEach(type => {
+      document.getElementById('admin-hazard-' + type).checked = false;
+    });
     return;
   }
   label.textContent = 'Hole ' + holeNumber + ' selected';
   const holeData = adminHoleMarkers[holeNumber];
   slider.value = String((holeData && holeData.teeMarker && holeData.teeMarker._rotationDeg) || 0);
+  const hazards = adminHoleHazards[holeNumber] || {};
+  HAZARD_TYPES.forEach(type => {
+    document.getElementById('admin-hazard-' + type).checked = !!hazards[type];
+  });
 }
 
 function generateAdminHoleFields(course) {
   const count = Number(document.getElementById('admin-hole-count').value) || 18;
   const container = document.getElementById('admin-holes-container');
   container.innerHTML = '';
+  adminHoleHazards = {};
   selectAdminHole(null);
 
   for (let i = 1; i <= count; i++) {
@@ -362,6 +375,11 @@ function generateAdminHoleFields(course) {
     fieldsRow.appendChild(label);
     fieldsRow.appendChild(lengthInput);
     fieldsRow.appendChild(parSelect);
+
+    // Track this hole's hazard state (read/updated by the shared toolbar
+    // checkboxes, not per-row inputs) so it survives regardless of
+    // whether this row is currently visible/selected.
+    adminHoleHazards[i] = (existingHole && existingHole.hazards) ? Object.assign({}, existingHole.hazards) : {};
 
     row.appendChild(fieldsRow);
     container.appendChild(row);
@@ -469,6 +487,12 @@ async function saveAdminCourse() {
       length: Number(lengthInput.value) || 0,
       par: Number(parSelect.value) || 3
     };
+    const hazards = {};
+    const storedHazards = adminHoleHazards[holeNumber] || {};
+    HAZARD_TYPES.forEach(type => {
+      if (storedHazards[type]) hazards[type] = true;
+    });
+    if (Object.keys(hazards).length) hole.hazards = hazards;
     const holeData = adminHoleMarkers[holeNumber];
     if (holeData && holeData.teeMarker) {
       const ll = holeData.teeMarker.getLatLng();

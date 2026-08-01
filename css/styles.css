@@ -147,6 +147,27 @@ body.dark-mode #admin-panel {
   background: #2C2C2C;
   color: #E0E0E0;
 }
+#putt-practice-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #fff;
+  padding: 0.5rem 1.5rem;
+  flex-direction: column;
+}
+#putt-practice-screen.active {
+  display: flex;
+}
+body.dark-mode #putt-practice-screen {
+  background: #2C2C2C;
+  color: #E0E0E0;
+}
+#putt-practice-map {
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 0.4rem;
+}
 .admin-panel-header {
   display: flex;
   justify-content: space-between;
@@ -190,6 +211,26 @@ body.dark-mode .admin-hole-row {
 }
 .admin-hole-row input[type="number"] {
   width: 5.5rem;
+}
+.admin-hole-hazards-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+}
+.admin-hazard-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.admin-hazard-checkbox input {
+  width: auto;
+  height: auto;
+  margin: 0;
 }
 #admin-map {
   width: 100%;
@@ -304,6 +345,24 @@ body.dark-mode .admin-toolbar-sep {
 }
 .admin-map-toolbar-buttons input[type="range"] {
   width: 8rem;
+}
+.admin-toolbar-lock-hazards-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  border-left: 1px solid #ddd;
+  padding-left: 0.6rem;
+  margin-left: 0.2rem;
+}
+body.dark-mode .admin-toolbar-lock-hazards-col {
+  border-left-color: #555;
+}
+.admin-toolbar-lock-hazards-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
 }
 #admin-map-wrapper {
   position: relative;
