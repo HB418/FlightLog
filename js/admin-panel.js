@@ -519,14 +519,10 @@ function setAdminNumbersLocked(locked) {
   });
 }
 
-// Captures a marker's current label offset (if custom-dragged) for
-// saving, converting the ratio back into the same raw-pixel-at-scale-1
-// format the course record already stores, so the saved schema itself
-// doesn't need to change.
+// Captures a marker's attached label position — now just reads the
+// value already stored on the label marker itself.
 function getLabelBaseOffset(marker) {
-  if (!marker || !marker._labelOffsetRatio) return null;
-  const baseHalfWidth = baseIconHalfWidthFor(marker);
-  return { x: marker._labelOffsetRatio.x * baseHalfWidth, y: marker._labelOffsetRatio.y * baseHalfWidth };
+  return (marker && marker._holeLabelMarker && marker._holeLabelMarker._baseOffsetPx) || null;
 }
 
 async function saveAdminCourse() {

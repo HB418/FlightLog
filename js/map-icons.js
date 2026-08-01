@@ -33,17 +33,20 @@ function scaleForZoom(map) {
   return Math.max(0.35, Math.min(scale, 3));
 }
 
-// Font size (rem) for the draggable hole-number labels. Uses the exact
-// same scale factor as the markers AND the label's own position offset
-// (no separate compressed range) — so the label's size, its distance
-// from its marker, and the marker's own size all grow/shrink together
-// at the identical rate. That's what actually fixes labels drifting far
-// from their marker or overlapping it at zooms other than wherever they
-// were originally positioned — the offset and the font were previously
-// scaling by two different formulas.
+// Font size (rem) for the draggable hole-number labels. Grows/shrinks
+// with zoom, but DAMPENED (scale^0.7, not scale directly) — full 1:1
+// scaling with the icon was what caused labels to grow large enough to
+// overlap the icon at high zoom; freezing it entirely (tested
+// previously) mostly fixed that but caused the label to visually fall
+// behind the icon's own growth, reading as a slight leftward drift at
+// higher zoom. This dampened growth is the middle ground: still
+// noticeably bigger at high zoom (closer to matching the icon's own
+// growth than before, to reduce that drift further), without growing
+// as fast as the icon itself.
 const LABEL_BASE_REM = 0.6;
 function labelFontRemForZoom(map) {
-  return LABEL_BASE_REM * scaleForZoom(map);
+  const scale = scaleForZoom(map);
+  return LABEL_BASE_REM * Math.pow(scale, 0.7);
 }
 
 function makeTeeDivIcon(rotationDeg, scale, isCurrent) {
@@ -135,18 +138,17 @@ function rescaleHoleLabel(marker, map, draggableOverride) {
   const oldLabel = marker._holeLabelMarker;
   if (!oldLabel) return;
   const text = oldLabel._labelText || '';
+  const baseOffset = oldLabel._baseOffsetPx || { x: 16, y: 0 };
   // Always fully recreate the label rather than mutate the existing one
   // — that's what actually guarantees a working drag handler every time
   // (see buildHoleLabelMarker for why). Position/scale always applies;
   // "locked" only ever controls whether the recreated label is draggable.
-  // The offset itself lives on the PARENT marker (_labelOffsetRatio),
-  // not the label, so it isn't affected by recreating the label here.
   const draggable = (draggableOverride !== undefined)
     ? draggableOverride
     : !!(oldLabel.dragging && oldLabel.dragging.enabled());
 
   map.removeLayer(oldLabel);
-  buildHoleLabelMarker(marker, map, text, null, draggable);
+  buildHoleLabelMarker(marker, map, text, baseOffset, draggable);
 }
 
 function updateMarkerHoleLabel(marker, holeNumbers, options) {
@@ -163,17 +165,11 @@ function updateMarkerHoleLabel(marker, holeNumbers, options) {
   }
 
   const draggable = options.draggable !== false; // default: draggable, unless explicitly told otherwise
-  // A saved course may have a legacy offset (raw pixels at scale=1,
-  // from an earlier version of this system) — convert it into today's
-  // ratio format, relative to the marker's own fixed base half-width,
-  // so it positions correctly under the current (fixed) math instead
-  // of being ignored or reapplied with the wrong scale.
-  if (options.baseOffset) {
-    const baseHalfWidth = baseIconHalfWidthFor(marker);
-    marker._labelOffsetRatio = { x: options.baseOffset.x / baseHalfWidth, y: options.baseOffset.y / baseHalfWidth };
-  }
+  // Base offset (scale=1 px units) — a saved one if provided (loading a
+  // course you already positioned numbers on), else the default spot.
+  const baseOffset = options.baseOffset || { x: 16, y: 0 };
 
-  buildHoleLabelMarker(marker, map, text, options.baseOffset, draggable);
+  buildHoleLabelMarker(marker, map, text, baseOffset, draggable);
 
   // Keep the label following the parent marker whenever IT moves (drag
   // or a programmatic setLatLng both fire Leaflet's 'move' event) —
@@ -188,44 +184,17 @@ function updateMarkerHoleLabel(marker, holeNumbers, options) {
   }
 }
 
-// A marker's own fixed BASE half-width (at scale=1, i.e. ICON_BASE_ZOOM)
-// — tee markers carry _rotationDeg, basket markers don't, so this is a
-// reliable way to tell them apart without a separate parameter.
-function baseIconHalfWidthFor(marker) {
-  return (marker._rotationDeg !== undefined ? TEE_BASE_W : BASKET_BASE_W) / 2;
-}
-
-// Computes a label's position offset from its marker. If the marker has
-// a custom dragged ratio stored, uses that; otherwise a small default
-// padding just past the marker's edge. Critically, BOTH cases scale the
-// offset using the marker's CURRENT rendered icon half-width — the same
-// value that already correctly respects the MIN_ICON_PX floor icons
-// have. That floor was the actual bug before: the marker's size stops
-// shrinking below 16px at low zoom, but an offset scaled by the raw
-// zoom factor alone (with no floor of its own) kept shrinking toward
-// zero, so the label collapsed onto the marker. Scaling from the same
-// floored value the icon itself uses keeps them moving together at
-// every zoom, custom-dragged or not.
-function computeLabelOffsetForMarker(marker) {
-  const icon = marker.options.icon;
-  const iconSize = (icon && icon.options && icon.options.iconSize) || [16, 16];
-  const halfWidth = iconSize[0] / 2;
-  if (marker._labelOffsetRatio) {
-    return { x: marker._labelOffsetRatio.x * halfWidth, y: marker._labelOffsetRatio.y * halfWidth };
-  }
-  const PADDING = 6;
-  return { x: halfWidth + PADDING, y: 0 };
-}
-
-// Builds (or rebuilds) a marker's attached number-label marker. Always
-// creates a FRESH Leaflet marker rather than reusing/repairing an
-// existing one — recreating is what guarantees a working drag handler;
-// toggling .enable() on one after its parent's icon was swapped
-// (setIcon) was not reliable.
+// Builds (or rebuilds) a marker's attached number-label marker at the
+// given base offset. Always creates a FRESH Leaflet marker rather than
+// trying to reuse/repair an existing one — recreating is what actually
+// guarantees a correctly working drag handler; toggling .enable() on an
+// existing one after its parent's icon was swapped (setIcon) was not
+// reliable (Leaflet's Handler.enable() no-ops if it thinks it's already
+// enabled, so it doesn't rebind to a new DOM element).
 function buildHoleLabelMarker(marker, map, text, baseOffset, draggable) {
-  const offset = computeLabelOffsetForMarker(marker);
+  const scale = scaleForZoom(map);
   const parentPt = map.latLngToContainerPoint(marker.getLatLng());
-  const labelPt = L.point(parentPt.x + offset.x, parentPt.y + offset.y);
+  const labelPt = L.point(parentPt.x + baseOffset.x * scale, parentPt.y + baseOffset.y * scale);
   const labelLatLng = map.containerPointToLatLng(labelPt);
 
   const fontRem = labelFontRemForZoom(map);
@@ -237,19 +206,16 @@ function buildHoleLabelMarker(marker, map, text, baseOffset, draggable) {
   });
   const labelMarker = L.marker(labelLatLng, { icon: icon, draggable: draggable, keyboard: false }).addTo(map);
   labelMarker._labelText = text;
+  labelMarker._baseOffsetPx = baseOffset;
 
   if (draggable) {
-    // On drag, store the new position as a RATIO of the marker's current
-    // icon half-width (not raw pixels) — that's what lets it be
-    // reapplied correctly at any other zoom later (see
-    // computeLabelOffsetForMarker above).
+    // Recompute the stored base offset once the user finishes dragging,
+    // so future zoom changes scale from the new position, not the old.
     labelMarker.on('dragend', () => {
+      const s = scaleForZoom(map);
       const pPt = map.latLngToContainerPoint(marker.getLatLng());
       const lPt = map.latLngToContainerPoint(labelMarker.getLatLng());
-      const curIcon = marker.options.icon;
-      const curIconSize = (curIcon && curIcon.options && curIcon.options.iconSize) || [16, 16];
-      const curHalfWidth = curIconSize[0] / 2;
-      marker._labelOffsetRatio = { x: (lPt.x - pPt.x) / curHalfWidth, y: (lPt.y - pPt.y) / curHalfWidth };
+      labelMarker._baseOffsetPx = { x: (lPt.x - pPt.x) / s, y: (lPt.y - pPt.y) / s };
     });
   }
 
@@ -257,14 +223,14 @@ function buildHoleLabelMarker(marker, map, text, baseOffset, draggable) {
   return labelMarker;
 }
 
-// Repositions a marker's attached label — recomputed fresh every time
-// from the marker's current icon size and its stored ratio (if any),
+// Repositions a marker's attached label from its stored base offset —
 // used both when the parent marker moves and on every zoom rescale.
 function repositionHoleLabel(marker, map) {
   const label = marker._holeLabelMarker;
   if (!label) return;
-  const offset = computeLabelOffsetForMarker(marker);
+  const scale = scaleForZoom(map);
+  const offset = label._baseOffsetPx || { x: 16, y: 0 };
   const parentPt = map.latLngToContainerPoint(marker.getLatLng());
-  const newPt = L.point(parentPt.x + offset.x, parentPt.y + offset.y);
+  const newPt = L.point(parentPt.x + offset.x * scale, parentPt.y + offset.y * scale);
   label.setLatLng(map.containerPointToLatLng(newPt));
 }

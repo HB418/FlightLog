@@ -234,10 +234,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const courseId = selectedCourseListId;
     const selectedItem = document.querySelector('.course-list-item.selected .course-list-item-name');
     const courseName = selectedItem ? selectedItem.textContent : 'this course';
+
+    const db = await openDiscTallyDB();
+    const course = await getCourseById(db, courseId);
+    const isStock = !!(course && course.stockKey);
+
+    if (isStock && !isAdminSession()) {
+      showGenericModal('"' + courseName + '" is a built-in stock course and can\'t be deleted. Only the admin account can remove it.');
+      return;
+    }
+
+    const message = isStock
+      ? 'WARNING: "' + courseName + '" is a built-in STOCK course, not one you created. Deleting it removes it from THIS device, but it will reappear on a fresh install elsewhere since it ships with the app itself. This does not undo that — it only affects your local copy. Continue?'
+      : 'Deleting "' + courseName + '" will remove its tee/basket map data, and it will no longer be selectable for stats or new rounds. This cannot be undone. Continue?';
+
     showConfirmModal(
-      'Deleting "' + courseName + '" will remove its tee/basket map data, and it will no longer be selectable for stats or new rounds. This cannot be undone. Continue?',
+      message,
       async () => {
-        const db = await openDiscTallyDB();
         await deleteCourse(db, courseId);
         await loadCourseOptions();
       }
