@@ -2,7 +2,60 @@
    The Admin Map Entry panel — a desktop-only, full-screen tool for
    creating and editing courses (including all existing ones, regardless
    of who created them), separate from the mobile-first flow regular
-   users go through. */
+   users go through.
+
+   Access is gated behind the admin account (name "Dom Dimaggio") —
+   there is NO separate admin login screen and NO visible button or
+   hint that an admin system exists at all for a regular user. The
+   *only* way in is typing the admin's name+password into the app's
+   normal Sign In screen (the exact same fields every regular user
+   already sees for their own account) — matching those credentials
+   there quietly starts an admin session instead of a regular one,
+   which is what reveals the Admin Map Entry button. A regular user
+   who has never heard of this has nothing to look at, click, or try
+   to break into. The admin session is intentionally NOT persisted via
+   "keep me signed in" — sessionStorage only, so it always needs to be
+   re-entered on a fresh browser session, unlike a regular login. */
+
+const ADMIN_ACCOUNT_NAME = 'Dom Dimaggio';
+const ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // sha256("admin")
+
+function isAdminSession() {
+  return sessionStorage.getItem('isAdminSession') === 'true';
+}
+
+// Checked from the Sign In form (namePrompt.js) before falling back to
+// the regular user-account check. Returns true and starts an admin
+// session if it's a match; otherwise returns false and does nothing.
+async function tryAdminSignIn(name, password) {
+  if (name !== ADMIN_ACCOUNT_NAME) return false;
+  const enteredHash = await hashPassword(password);
+  if (enteredHash !== ADMIN_PASSWORD_HASH) return false;
+  sessionStorage.setItem('isAdminSession', 'true');
+  updateAdminButtonVisibility();
+  return true;
+}
+
+function endAdminSession() {
+  sessionStorage.removeItem('isAdminSession');
+  updateAdminButtonVisibility();
+}
+
+// Shows the Admin Map Entry button only when BOTH an admin session is
+// active AND the viewport is desktop-sized — driven entirely from JS
+// (inline style always wins over the CSS class's own media query) so
+// there's one single place this logic lives.
+function updateAdminButtonVisibility() {
+  const btn = document.getElementById('admin-map-entry-btn');
+  if (!btn) return;
+  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+  btn.style.display = (isAdminSession() && isDesktop) ? 'inline-block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateAdminButtonVisibility();
+  window.addEventListener('resize', updateAdminButtonVisibility);
+});
 
 // Admin Map Entry state
 let adminMap = null;
@@ -466,10 +519,14 @@ function setAdminNumbersLocked(locked) {
   });
 }
 
-// Captures a marker's attached label position — now just reads the
-// value already stored on the label marker itself.
+// Captures a marker's current label offset (if custom-dragged) for
+// saving, converting the ratio back into the same raw-pixel-at-scale-1
+// format the course record already stores, so the saved schema itself
+// doesn't need to change.
 function getLabelBaseOffset(marker) {
-  return (marker && marker._holeLabelMarker && marker._holeLabelMarker._baseOffsetPx) || null;
+  if (!marker || !marker._labelOffsetRatio) return null;
+  const baseHalfWidth = baseIconHalfWidthFor(marker);
+  return { x: marker._labelOffsetRatio.x * baseHalfWidth, y: marker._labelOffsetRatio.y * baseHalfWidth };
 }
 
 async function saveAdminCourse() {

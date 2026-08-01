@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=40"/>
+  <link rel="stylesheet" href="css/styles.css?v=41"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -361,13 +361,13 @@
   <script src="js/db.js?v=3"></script>
   <script src="js/stock-courses.js?v=1"></script>
   <script src="js/ratings.js?v=1"></script>
-  <script src="js/map-icons.js?v=2"></script>
+  <script src="js/map-icons.js?v=6"></script>
   <script src="js/course-wizard.js?v=1"></script>
-  <script src="js/admin-panel.js?v=3"></script>
-  <script src="js/round.js?v=3"></script>
+  <script src="js/admin-panel.js?v=5"></script>
+  <script src="js/round.js?v=4"></script>
   <script src="js/putt-practice.js?v=1"></script>
-  <script src="js/main.js?v=85"></script>
-  <script src="js/namePrompt.js?v=6"></script>
+  <script src="js/main.js?v=89"></script>
+  <script src="js/namePrompt.js?v=9"></script>
 
 
 </div>
@@ -437,6 +437,7 @@
       <button id="menu-stats-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Stats</button>
       <button id="menu-discs-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Discs</button>
       <button id="menu-ratings-info-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Flight/Course Ratings</button>
+      <button id="menu-logout-btn" class="paper-btn" style="width:100%;margin-bottom:0.4rem;">Log Out</button>
       <button id="menu-close-btn" class="paper-btn" style="width:100%;">Close</button>
     </div>
   </div>
@@ -523,7 +524,8 @@
     </div>
   </div>
 
-  <!-- Admin Map Entry Panel (desktop-only, full-screen) -->
+  <!-- Admin Map Entry Panel (desktop-only, full-screen) —
+       only shown/reachable when signed in as the admin account. -->
   <div id="admin-panel">
     <!-- List screen -->
     <div id="admin-list-screen">

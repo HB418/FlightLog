@@ -374,6 +374,19 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('ratings-info-modal').classList.remove('active');
   });
 
+  document.getElementById('menu-logout-btn')?.addEventListener('click', () => {
+    document.getElementById('hamburger-menu-modal').classList.remove('active');
+    if (currentRound) exitRound();
+    endAdminSession();
+    clearAccountFields();
+    localStorage.setItem('userAutoLogin', 'false');
+    document.getElementById('signin-email-input').value = '';
+    document.getElementById('signin-password-input').value = '';
+    document.getElementById('signin-remember-checkbox').checked = false;
+    document.getElementById('signin-status').textContent = '';
+    document.getElementById('signin-modal').classList.add('active');
+  });
+
   document.getElementById('close-stats-modal-btn')?.addEventListener('click', () => {
     document.getElementById('stats-modal').classList.remove('active');
   });

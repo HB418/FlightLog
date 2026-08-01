@@ -38,6 +38,50 @@ function looksLikeEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+// Populates the Account page's fields fresh from localStorage — called
+// both when the Account modal is opened AND immediately after a
+// successful sign-up/sign-in, so the data is refreshed as an explicit
+// part of logging in rather than only whenever the modal next happens
+// to open. An admin session has no regular profile fields of its own
+// (name/state/email/password all belong to the regular account system),
+// so it shows the admin identity instead of whatever regular profile
+// happens to be sitting in localStorage — otherwise this was showing
+// a previous regular user's leftover info while "logged in" as admin.
+function refreshAccountFieldsFromStorage() {
+  if (isAdminSession()) {
+    document.getElementById('account-view-name').textContent = ADMIN_ACCOUNT_NAME + ' (Admin)';
+    document.getElementById('account-view-state').textContent = '—';
+    document.getElementById('account-view-email').textContent = '—';
+    document.getElementById('account-view-flight-rating').textContent = '—';
+    document.getElementById('account-name-input').value = ADMIN_ACCOUNT_NAME;
+    document.getElementById('account-state-select').value = '';
+    document.getElementById('account-email-input').value = '';
+    return;
+  }
+  document.getElementById('account-view-name').textContent = localStorage.getItem('userName') || '';
+  document.getElementById('account-view-state').textContent = localStorage.getItem('userState') || '';
+  document.getElementById('account-view-email').textContent = localStorage.getItem('userEmail') || '';
+  document.getElementById('account-view-flight-rating').textContent = getStoredFlightRating();
+  document.getElementById('account-name-input').value = localStorage.getItem('userName') || '';
+  document.getElementById('account-state-select').value = localStorage.getItem('userState') || '';
+  document.getElementById('account-email-input').value = localStorage.getItem('userEmail') || '';
+}
+window.refreshAccountFieldsFromStorage = refreshAccountFieldsFromStorage;
+
+// Blanks the Account page's fields out entirely — called on Log Out, so
+// no previous session's info is left sitting in the DOM (even in a
+// closed/hidden modal) once you're signed out.
+function clearAccountFields() {
+  document.getElementById('account-view-name').textContent = '';
+  document.getElementById('account-view-state').textContent = '';
+  document.getElementById('account-view-email').textContent = '';
+  document.getElementById('account-view-flight-rating').textContent = '';
+  document.getElementById('account-name-input').value = '';
+  document.getElementById('account-state-select').value = '';
+  document.getElementById('account-email-input').value = '';
+}
+window.clearAccountFields = clearAccountFields;
+
 document.addEventListener('DOMContentLoaded', function () {
   populateStateSelect(document.getElementById('signup-state-select'));
   populateStateSelect(document.getElementById('account-state-select'));
@@ -55,10 +99,19 @@ document.addEventListener('DOMContentLoaded', function () {
   const welcomeModal = document.getElementById('welcome-modal');
   const signinModal = document.getElementById('signin-modal');
 
-  if (!hasAccount) {
+  // An admin session (sessionStorage) survives a page reload within the
+  // same browser session even though it's not tied to the regular
+  // account system at all — if one's already active, skip the prompt
+  // and make sure the Account page reflects admin, not a leftover
+  // regular profile.
+  if (isAdminSession()) {
+    refreshAccountFieldsFromStorage();
+  } else if (!hasAccount) {
     welcomeModal.classList.add('active');
   } else if (!autoLogin) {
     signinModal.classList.add('active');
+  } else {
+    refreshAccountFieldsFromStorage();
   }
 
   document.getElementById('save-signup-btn')?.addEventListener('click', async () => {
@@ -96,6 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     statusEl.textContent = '';
     welcomeModal.classList.remove('active');
+    refreshAccountFieldsFromStorage();
   });
 
   document.getElementById('save-signin-btn')?.addEventListener('click', async () => {
@@ -108,6 +162,20 @@ document.addEventListener('DOMContentLoaded', function () {
       statusEl.textContent = 'Enter your email and password.';
       return;
     }
+
+    // Check the admin account first — typing its name+password into
+    // this exact same box quietly starts an admin session instead of a
+    // regular one. Falls through to the normal check below if it isn't
+    // a match, so this never affects a regular user's own sign-in.
+    if (await tryAdminSignIn(email, password)) {
+      document.getElementById('signin-email-input').value = '';
+      document.getElementById('signin-password-input').value = '';
+      statusEl.textContent = '';
+      signinModal.classList.remove('active');
+      refreshAccountFieldsFromStorage();
+      return;
+    }
+
     const storedEmail = localStorage.getItem('userEmail') || '';
     const storedHash = localStorage.getItem('userPasswordHash') || '';
     const enteredHash = await hashPassword(password);
@@ -122,16 +190,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('signin-password-input').value = '';
     statusEl.textContent = '';
     signinModal.classList.remove('active');
+    refreshAccountFieldsFromStorage();
   });
 
   function openAccountModal() {
-    document.getElementById('account-view-name').textContent = localStorage.getItem('userName') || '';
-    document.getElementById('account-view-state').textContent = localStorage.getItem('userState') || '';
-    document.getElementById('account-view-email').textContent = localStorage.getItem('userEmail') || '';
-    document.getElementById('account-view-flight-rating').textContent = getStoredFlightRating();
-    document.getElementById('account-name-input').value = localStorage.getItem('userName') || '';
-    document.getElementById('account-state-select').value = localStorage.getItem('userState') || '';
-    document.getElementById('account-email-input').value = localStorage.getItem('userEmail') || '';
+    refreshAccountFieldsFromStorage();
     document.getElementById('account-current-password-input').value = '';
     document.getElementById('account-new-password-input').value = '';
     document.getElementById('account-new-password-confirm-input').value = '';
@@ -226,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.removeItem('userPasswordHash');
         localStorage.removeItem('userAutoLogin');
         document.getElementById('account-modal').classList.remove('active');
+        clearAccountFields();
         document.getElementById('welcome-modal').classList.add('active');
       }
     );

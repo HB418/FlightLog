@@ -106,6 +106,33 @@ function followMapToCurrentHole() {
   updateCurrentHoleStyling(headerMap, headerMapIcons, headerMapLines, hole.number);
 }
 
+// Generates a smooth Catmull-Rom spline through a series of [lat,lng]
+// points, so the tee-to-basket line curves naturally through waypoints
+// like a disc's actual flight path, instead of bending sharply at each
+// one the way a plain polyline does. At this scale (a single hole, at
+// most a few hundred feet) treating lat/lng as flat X/Y coordinates for
+// the interpolation is accurate enough — no geodesic correction needed.
+function catmullRomSplinePoints(points, segmentsPerSpan) {
+  if (points.length < 3) return points; // a straight line is already "smooth" with only 2 points
+  segmentsPerSpan = segmentsPerSpan || 12;
+  // Pad with duplicated endpoints so the curve actually reaches the real
+  // first/last point (Catmull-Rom needs a point on each side of every span).
+  const padded = [points[0], ...points, points[points.length - 1]];
+  const result = [];
+  for (let i = 0; i < padded.length - 3; i++) {
+    const p0 = padded[i], p1 = padded[i + 1], p2 = padded[i + 2], p3 = padded[i + 3];
+    for (let t = 0; t < segmentsPerSpan; t++) {
+      const s = t / segmentsPerSpan;
+      const s2 = s * s, s3 = s2 * s;
+      const lat = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * s + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * s2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * s3);
+      const lng = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * s + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * s2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * s3);
+      result.push([lat, lng]);
+    }
+  }
+  result.push(points[points.length - 1]); // exact endpoint, not an interpolated approximation of it
+  return result;
+}
+
 function renderCourseOverlay(map, holes, registry, lineRegistry) {
   const bounds = [];
   const scale = scaleForZoom(map);
@@ -128,7 +155,8 @@ function renderCourseOverlay(map, holes, registry, lineRegistry) {
       const pts = [[h.tee.lat, h.tee.lng]];
       (h.waypoints || []).forEach(w => pts.push([w.lat, w.lng]));
       pts.push([h.basket.lat, h.basket.lng]);
-      const pl = L.polyline(pts, { color: '#FFD400', weight: 2, opacity: 0.85 }).addTo(map);
+      const curvedPts = catmullRomSplinePoints(pts);
+      const pl = L.polyline(curvedPts, { color: '#FFD400', weight: 2, opacity: 0.85 }).addTo(map);
       if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl });
     }
   });

@@ -937,13 +937,15 @@ body.dark-mode #welcome-modal .custom-modal-content h4 {
    oversized and cramped. */
 #welcome-modal .custom-modal-content,
 #signin-modal .custom-modal-content,
-#account-modal .custom-modal-content {
+#account-modal .custom-modal-content,
+#admin-login-modal .custom-modal-content {
   max-width: 380px;
   text-align: left;
 }
 #welcome-modal label,
 #signin-modal label,
-#account-modal label {
+#account-modal label,
+#admin-login-modal label {
   display: block;
   font-size: 0.8rem;
   margin: 0.5rem 0 0.15rem;
@@ -953,7 +955,8 @@ body.dark-mode #welcome-modal .custom-modal-content h4 {
 #signin-modal input,
 #signin-modal select,
 #account-modal input,
-#account-modal select {
+#account-modal select,
+#admin-login-modal input {
   width: 100%;
   box-sizing: border-box;
   font-size: 0.85rem;
@@ -968,7 +971,8 @@ body.dark-mode #welcome-modal select,
 body.dark-mode #signin-modal input,
 body.dark-mode #signin-modal select,
 body.dark-mode #account-modal input,
-body.dark-mode #account-modal select {
+body.dark-mode #account-modal select,
+body.dark-mode #admin-login-modal input {
   border-color: var(--mustard);
   background-color: #333;
   color: #fff;
@@ -1030,7 +1034,8 @@ body.dark-mode .account-info-label {
 }
 #account-modal .paper-btn,
 #welcome-modal .paper-btn,
-#signin-modal .paper-btn {
+#signin-modal .paper-btn,
+#admin-login-modal .paper-btn {
   min-height: 0;
   padding: 0.4rem 0.6rem;
   font-size: 0.85rem;
