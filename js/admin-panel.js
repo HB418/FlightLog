@@ -286,6 +286,8 @@ function openAdminEditor(course) {
 
   document.getElementById('admin-editor-title').textContent = course ? ('Editing: ' + course.name) : 'New Course';
   document.getElementById('admin-course-name').value = course ? (course.name || '') : '';
+  document.getElementById('admin-course-location').value = course ? (course.location || '') : '';
+  document.getElementById('admin-course-address').value = course ? (course.address || '') : '';
 
   const holeCountSelect = document.getElementById('admin-hole-count');
   holeCountSelect.innerHTML = '';
@@ -534,6 +536,8 @@ function getLabelBaseOffset(marker) {
 async function saveAdminCourse() {
   const name = document.getElementById('admin-course-name').value.trim();
   if (!name) { showGenericModal('Please enter a course name.'); return; }
+  const location = document.getElementById('admin-course-location').value.trim();
+  const address = document.getElementById('admin-course-address').value.trim();
 
   const rows = document.querySelectorAll('#admin-holes-container .admin-hole-row');
   const holes = [];
@@ -579,7 +583,7 @@ async function saveAdminCourse() {
 
   if (adminEditingCourseId != null) {
     const existing = await getCourseById(db, adminEditingCourseId);
-    const courseRecord = Object.assign({}, existing, { name, holes, logo: adminEditingLogoDataUrl || undefined });
+    const courseRecord = Object.assign({}, existing, { name, location, address, holes, logo: adminEditingLogoDataUrl || undefined });
     if (!adminEditingLogoDataUrl) delete courseRecord.logo;
     if (adminCourseLat != null && adminCourseLng != null) {
       courseRecord.lat = adminCourseLat;
@@ -587,7 +591,7 @@ async function saveAdminCourse() {
     }
     await updateCourse(db, courseRecord);
   } else {
-    const courseRecord = { name, holes, source: 'admin' };
+    const courseRecord = { name, location, address, holes, source: 'admin' };
     if (adminEditingLogoDataUrl) courseRecord.logo = adminEditingLogoDataUrl;
     if (adminCourseLat != null && adminCourseLng != null) {
       courseRecord.lat = adminCourseLat;

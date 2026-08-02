@@ -10,6 +10,37 @@ let mapZoomMap = null;
 let headerMapLocationTracker = null;
 let mapZoomMapLocationTracker = null;
 
+/* ---------- Round persistence (survive an accidental close) ----------
+   currentRound previously only lived in memory until Finish Round was
+   pressed — closing the tab/browser mid-round lost everything. Now
+   saved to localStorage on every change (starting a round, every score
+   entered, every player name added/edited) so it can be restored via
+   the "Continue Round" button. Only cleared once the round is actually
+   finished (saved to real round history) or explicitly canceled. */
+function saveInProgressRound() {
+  if (!currentRound) return;
+  try {
+    localStorage.setItem('inProgressRound', JSON.stringify(currentRound));
+  } catch (err) {
+    console.error('Failed to save in-progress round:', err);
+  }
+}
+
+function loadInProgressRound() {
+  const raw = localStorage.getItem('inProgressRound');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to parse saved in-progress round:', err);
+    return null;
+  }
+}
+
+function clearInProgressRound() {
+  localStorage.removeItem('inProgressRound');
+}
+
 function startRound(course) {
   const playerName = localStorage.getItem('userName') || 'Player 1';
   const holes = course.holes || [];
@@ -26,6 +57,7 @@ function startRound(course) {
       { name: playerName, scores: {} }
     ]
   };
+  saveInProgressRound();
 
   document.getElementById('controls-section').classList.add('hide');
   document.getElementById('course-actions-section').classList.add('hide');
@@ -38,6 +70,30 @@ function startRound(course) {
   // Wrapped in try/catch: a bug in the map/overlay code should never be
   // able to prevent the scorecard itself from rendering.
   if (hasCourseMap) {
+    try {
+      showHeaderMap();
+    } catch (err) {
+      console.error('showHeaderMap failed, continuing without the map:', err);
+    }
+  }
+  buildScorecard(currentRound);
+}
+
+// Restores a round from localStorage after an accidental close (or
+// getting bumped out via Log Out/Admin/Delete Course) — same UI
+// transition as startRound(), just using the saved round data instead
+// of building a fresh one from a course.
+function resumeInProgressRound() {
+  const saved = loadInProgressRound();
+  if (!saved) return;
+  currentRound = saved;
+
+  document.getElementById('controls-section').classList.add('hide');
+  document.getElementById('course-actions-section').classList.add('hide');
+  document.getElementById('stats-section').classList.add('hide');
+  document.getElementById('scorecard-card').classList.remove('hide');
+
+  if (currentRound.hasCourseMap) {
     try {
       showHeaderMap();
     } catch (err) {
@@ -344,12 +400,16 @@ function buildScorecard(round) {
   const holes = round.holes || [];
   const front = holes.slice(0, 9);
   const back = holes.slice(9);
+  const parSum = (hs) => hs.reduce((sum, h) => sum + (Number(h.par) || 0), 0);
+  const frontPar = parSum(front);
+  const backPar = parSum(back);
+  const totalPar = frontPar + backPar;
 
   const frontWrap = document.createElement('div');
   frontWrap.className = 'scorecard-half';
   const frontLabel = document.createElement('h5');
   frontLabel.className = 'scorecard-half-label';
-  frontLabel.textContent = 'Front 9';
+  frontLabel.textContent = 'Front 9 \u00b7 Par ' + frontPar + ' \u00b7 Course Total ' + totalPar;
   const frontScroll = document.createElement('div');
   frontScroll.className = 'scorecard-scroll';
   frontScroll.appendChild(buildHoleTable(round, front, 0));
@@ -362,7 +422,7 @@ function buildScorecard(round) {
     backWrap.className = 'scorecard-half';
     const backLabel = document.createElement('h5');
     backLabel.className = 'scorecard-half-label';
-    backLabel.textContent = 'Back 9';
+    backLabel.textContent = 'Back 9 \u00b7 Par ' + backPar + ' \u00b7 Course Total ' + totalPar;
     const backScroll = document.createElement('div');
     backScroll.className = 'scorecard-scroll';
     backScroll.appendChild(buildHoleTable(round, back, 9));
@@ -434,6 +494,7 @@ function buildHoleTable(round, holesSubset, offset) {
         display.classList.add('has-score');
         renderScorecardTotals(round);
         followMapToCurrentHole();
+        saveInProgressRound();
       });
 
       wrap.appendChild(select);
@@ -469,13 +530,27 @@ function buildHoleTable(round, holesSubset, offset) {
   return table;
 }
 
+// Running par total — only counts holes where at least one player has
+// actually entered a score, so it's directly comparable to the running
+// player totals at any point mid-round (not the full course par upfront).
+function computeRunningTotalPar(round) {
+  const holes = round.holes || [];
+  return holes.reduce((sum, h) => {
+    const played = round.players.some(p => p.scores[h.number] != null);
+    return played ? sum + (Number(h.par) || 0) : sum;
+  }, 0);
+}
+
 function renderScorecardTotals(round) {
   const bar = document.getElementById('scorecard-totals-bar');
   if (!bar) return;
   bar.innerHTML = round.players.map((p, idx) =>
     '<div class="scorecard-total-row" data-player="' + idx + '"><span>' + p.name + '</span>' +
     '<span class="player-total-value">' + computePlayerTotal(p) + '</span></div>'
-  ).join('');
+  ).join('') +
+    '<hr class="scorecard-totals-divider"/>' +
+    '<div class="scorecard-total-row scorecard-total-par-row"><span>Total Par</span>' +
+    '<span class="player-total-value">' + computeRunningTotalPar(round) + '</span></div>';
 }
 
 async function openLastRoundModal(courseId) {
@@ -542,6 +617,7 @@ async function finishRound() {
   };
   await addRound(db, roundRecord);
   await recomputeFlightRating();
+  clearInProgressRound();
 
   const summaryEl = document.getElementById('round-summary-content');
   summaryEl.innerHTML = currentRound.players.map(p => {
@@ -552,6 +628,21 @@ async function finishRound() {
   }).join('');
 
   document.getElementById('round-summary-modal').classList.add('active');
+}
+
+// Explicitly abandons the current round — unlike getting bumped out via
+// Log Out/Admin/Delete Course (which leaves the round recoverable via
+// Continue Round), this permanently discards it after a confirmation,
+// since it's a deliberate "I don't want this round" action.
+function cancelRound() {
+  if (!currentRound) return;
+  showConfirmModal(
+    'This will permanently discard this round\'s scores. This cannot be undone. Continue?',
+    () => {
+      clearInProgressRound();
+      exitRound();
+    }
+  );
 }
 
 /* ---------- Add Player ---------- */
@@ -575,6 +666,7 @@ function saveAddPlayer() {
   currentRound.players.push({ name, scores: {} });
   buildScorecard(currentRound);
   closeAddPlayerModal();
+  saveInProgressRound();
 }
 
 /* ---------- Stats ---------- */

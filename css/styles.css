@@ -548,6 +548,17 @@ body.dark-mode .scorecard-totals {
 .scorecard-total-row .player-total-value {
   font-weight: bold;
 }
+.scorecard-totals-divider {
+  border: none;
+  border-top: 1px solid var(--teal);
+  margin: 0.4rem 0.2rem;
+}
+body.dark-mode .scorecard-totals-divider {
+  border-top-color: var(--mustard);
+}
+.scorecard-total-par-row {
+  font-style: italic;
+}
 
 .scorecard-history-link {
   text-align: center;
@@ -875,6 +886,29 @@ body.dark-mode .hole-record-box {
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Course-picker modal specifically: only the tile grid scrolls, not the
+   modal box itself (having BOTH the modal and the grid independently
+   scrollable was the "two scrollbars" bug). Cancel floats as a fixed,
+   raised button over the bottom of the popup instead of scrolling away
+   with the grid content, and the grid gets extra bottom padding so its
+   last row can scroll up past the floating button instead of staying
+   stuck behind it. */
+#course-list-modal .custom-modal-content {
+  overflow: hidden;
+  position: relative;
+}
+#course-list-modal .course-grid {
+  padding-bottom: 4rem;
+}
+#course-list-cancel-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
 }
 
 /* Full-size map popups — the map fills nearly the whole modal instead
@@ -1294,70 +1328,62 @@ body.dark-mode {
   color: #E0E0E0;
 }
 
-/* Course-picker grid: 2 large square buttons per row, touching each
-   other and the popup's edges. Each tile has a square, centered,
-   raised/embossed panel holding the (large) logo, with the course
-   name + hole count/par info at the bottom of that same raised panel.
+/* Course-picker list: single column, one row per course. Logo on the
+   left (dominant, no border of its own), name/holes+par/city stacked
+   on the right. Always shows 10 slots; empty slots show a "Course
+   coming soon" placeholder and get replaced as real courses are added.
    Replaces the old dropdown-style list for the course picker shown
    after Start New Round / Putt Practice, and the Courses (delete)
    list from the hamburger menu. */
 .course-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  max-height: 65vh;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  max-height: 75vh;
   overflow-y: auto;
+  padding: 0.2rem;
 }
 .course-grid-tile {
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem;
-  background: #eee;
+  position: relative;
   cursor: pointer;
+  background: #fff;
+  border: 3px solid var(--teal);
+  border-radius: 0.6rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  height: 7.35rem;
 }
 body.dark-mode .course-grid-tile {
-  background: #262626;
+  background: #2C2C2C;
+  border-color: var(--mustard);
 }
-.course-grid-tile-raised {
-  width: 100%;
-  height: 100%;
-  border-radius: 0.5rem;
-  background: radial-gradient(circle at 50% 32%, #ffffff 0%, #e9e9e9 62%, #d2d2d2 100%);
-  box-shadow:
-    inset 0 2px 5px rgba(255, 255, 255, 0.95),
-    inset 0 -4px 10px rgba(0, 0, 0, 0.18),
-    0 2px 5px rgba(0, 0, 0, 0.2);
+.course-grid-tile-content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
-  overflow: hidden;
-  padding-bottom: 0.4rem;
-}
-body.dark-mode .course-grid-tile-raised {
-  background: radial-gradient(circle at 50% 32%, #4a4a4a 0%, #3a3a3a 62%, #2a2a2a 100%);
-  box-shadow:
-    inset 0 2px 5px rgba(255, 255, 255, 0.12),
-    inset 0 -4px 10px rgba(0, 0, 0, 0.4),
-    0 2px 5px rgba(0, 0, 0, 0.3);
-}
-.course-grid-tile:hover .course-grid-tile-raised {
-  box-shadow:
-    inset 0 2px 5px rgba(255, 255, 255, 0.95),
-    inset 0 -4px 10px rgba(0, 0, 0, 0.18),
-    0 3px 9px rgba(0, 0, 0, 0.3);
+  gap: 1.1rem;
+  padding: 0.6rem;
 }
 .course-grid-tile-logo {
-  width: 92%;
-  flex: 1 1 auto;
-  min-height: 0;
+  height: 100%;
+  width: auto;
+  max-width: 42%;
+  flex: 0 0 auto;
   object-fit: contain;
-  padding: 0.3rem 0.3rem 0;
+  /* PaperCSS applies its own hand-drawn border/shadow effect to <img>
+     tags by default — strip it here so the logo renders clean with no
+     border of its own, leaving only the tile's own intentional border. */
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  filter: none !important;
+  border-radius: 0 !important;
 }
 .course-grid-tile-logo-placeholder {
-  width: 55%;
+  height: 70%;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: var(--teal);
@@ -1366,40 +1392,63 @@ body.dark-mode .course-grid-tile-raised {
   justify-content: center;
   color: #fff;
   font-weight: bold;
-  font-size: 2rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  margin-top: 0.4rem;
+  font-size: 1.8rem;
+  flex: 0 0 auto;
 }
 body.dark-mode .course-grid-tile-logo-placeholder {
   background: var(--mustard);
 }
 .course-grid-tile-info {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  column-gap: 0.4rem;
-  row-gap: 0;
-  font-size: 0.8rem;
+  gap: 0.15rem;
+  font-size: 0.9rem;
   line-height: 1.25;
-  padding: 0 0.4rem;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #2a2a2a;
+}
+body.dark-mode .course-grid-tile-info {
+  color: #e0e0e0;
+}
+/* Mobile-first: 0.9rem is the base (phone) size above; only scale up
+   to the larger size on wider screens, matching the same breakpoint
+   used elsewhere in the app. */
+@media (min-width: 768px) {
+  .course-grid-tile-info {
+    font-size: 1.2rem;
+  }
 }
 .course-grid-tile-name {
   font-weight: bold;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .course-grid-tile-meta {
   opacity: 0.75;
   white-space: nowrap;
 }
+.course-grid-tile-address {
+  font-size: 0.8rem;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+.course-grid-tile-location {
+  font-size: 0.8rem;
+  opacity: 0.65;
+  white-space: nowrap;
+}
 .course-grid-tile-empty {
-  aspect-ratio: 1 / 1;
+  height: 7.35rem;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px dashed #bbb;
+  border-radius: 0.6rem;
   color: #999;
   font-size: 0.8rem;
   text-align: center;

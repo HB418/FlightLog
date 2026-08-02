@@ -114,6 +114,13 @@ document.addEventListener('DOMContentLoaded', function () {
     refreshAccountFieldsFromStorage();
   }
 
+  document.getElementById('signup-to-signin-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    welcomeModal.classList.remove('active');
+    document.getElementById('signin-status').textContent = '';
+    signinModal.classList.add('active');
+  });
+
   document.getElementById('save-signup-btn')?.addEventListener('click', async () => {
     const statusEl = document.getElementById('signup-status');
     const name = document.getElementById('signup-name-input').value.trim();

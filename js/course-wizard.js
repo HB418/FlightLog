@@ -32,6 +32,8 @@ function showNCScreen(id) {
 
 function openNewCourseModal() {
   document.getElementById('nc-course-name').value = '';
+  document.getElementById('nc-course-location').value = '';
+  document.getElementById('nc-course-address').value = '';
 
   const holeCountSelect = document.getElementById('nc-hole-count');
   holeCountSelect.innerHTML = '';
@@ -536,6 +538,8 @@ function promptSaveOrBack() {
 
 async function finishCourseCreation() {
   const name = document.getElementById('nc-course-name').value.trim();
+  const location = document.getElementById('nc-course-location').value.trim();
+  const address = document.getElementById('nc-course-address').value.trim();
   const rows = document.querySelectorAll('#nc-holes-container .new-course-hole-row');
 
   if (!name || rows.length === 0) {
@@ -562,7 +566,7 @@ async function finishCourseCreation() {
   });
 
   const db = await openDiscTallyDB();
-  const courseRecord = { name, holes, visibility: pendingCourseVisibility };
+  const courseRecord = { name, location, address, holes, visibility: pendingCourseVisibility };
   if (pendingCourseLat != null && pendingCourseLng != null) {
     courseRecord.lat = pendingCourseLat;
     courseRecord.lng = pendingCourseLng;

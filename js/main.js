@@ -10,6 +10,17 @@ let courseListMode = 'select';   // 'select' | 'delete' | 'putt-practice' — wh
 document.addEventListener('DOMContentLoaded', function () {
   seedStockCourses().then(loadCourseOptions);
 
+  // Show "Continue Round" if a round was saved (accidental close, or
+  // getting bumped out via Log Out/Admin/Delete Course) and hasn't been
+  // finished or explicitly canceled yet.
+  if (loadInProgressRound()) {
+    document.getElementById('continue-round-row')?.classList.remove('hide');
+  }
+  document.getElementById('continue-round-btn')?.addEventListener('click', () => {
+    document.getElementById('continue-round-row')?.classList.add('hide');
+    resumeInProgressRound();
+  });
+
   document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
   document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
   document.getElementById('field-work-btn')?.addEventListener('click', () => {
@@ -208,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
     img.style.transform = 'rotate(' + deg + 'deg)';
   });
 
-  document.getElementById('course-list-close-btn')?.addEventListener('click', () => {
+  document.getElementById('course-list-cancel-btn')?.addEventListener('click', () => {
     document.getElementById('course-list-modal').classList.remove('active');
   });
 
@@ -339,6 +350,8 @@ document.addEventListener('DOMContentLoaded', function () {
       finishRound
     );
   });
+
+  document.getElementById('cancel-round-btn')?.addEventListener('click', cancelRound);
   document.getElementById('cancel-add-player-btn')?.addEventListener('click', closeAddPlayerModal);
   document.getElementById('save-add-player-btn')?.addEventListener('click', saveAddPlayer);
 
@@ -490,25 +503,25 @@ async function loadCourseOptions() {
     return;
   }
 
-  courses.forEach(c => {
+  courses.forEach((c, index) => {
     const tile = document.createElement('div');
     tile.className = 'course-grid-tile';
 
-    const raised = document.createElement('div');
-    raised.className = 'course-grid-tile-raised';
-    tile.appendChild(raised);
+    const content = document.createElement('div');
+    content.className = 'course-grid-tile-content';
+    tile.appendChild(content);
 
     if (c.logo) {
       const img = document.createElement('img');
       img.className = 'course-grid-tile-logo';
       img.src = c.logo;
       img.alt = '';
-      raised.appendChild(img);
+      content.appendChild(img);
     } else {
       const placeholder = document.createElement('div');
       placeholder.className = 'course-grid-tile-logo-placeholder';
       placeholder.textContent = (c.name || '?').charAt(0).toUpperCase();
-      raised.appendChild(placeholder);
+      content.appendChild(placeholder);
     }
 
     const infoRow = document.createElement('div');
@@ -519,6 +532,20 @@ async function loadCourseOptions() {
     nameEl.textContent = c.name || `Course ${c.id}`;
     infoRow.appendChild(nameEl);
 
+    if (c.address) {
+      const addressEl = document.createElement('span');
+      addressEl.className = 'course-grid-tile-address';
+      addressEl.textContent = c.address;
+      infoRow.appendChild(addressEl);
+    }
+
+    if (c.location) {
+      const locationEl = document.createElement('span');
+      locationEl.className = 'course-grid-tile-location';
+      locationEl.textContent = c.location;
+      infoRow.appendChild(locationEl);
+    }
+
     const metaEl = document.createElement('span');
     metaEl.className = 'course-grid-tile-meta';
     const holeCount = c.holes ? c.holes.length : 0;
@@ -526,14 +553,18 @@ async function loadCourseOptions() {
     metaEl.textContent = holeCount + ' holes' + (totalPar ? (' \u00b7 Par ' + totalPar) : '');
     infoRow.appendChild(metaEl);
 
-    raised.appendChild(infoRow);
+    content.appendChild(infoRow);
 
     tile.addEventListener('click', () => handleCourseTileClick(c));
     listEl.appendChild(tile);
   });
 
-  // Fill out an incomplete last row (2 columns) with a placeholder tile.
-  if (courses.length % 2 === 1) {
+  // Always show a full list of 10 slots — fill any remaining empty
+  // slots with "Course coming soon" placeholders. If there are more
+  // than 10 real courses, no placeholders are added and the list just
+  // grows past 10 as needed.
+  const minSlots = 10;
+  for (let i = courses.length; i < minSlots; i++) {
     const empty = document.createElement('div');
     empty.className = 'course-grid-tile-empty';
     empty.textContent = 'Course coming soon';
