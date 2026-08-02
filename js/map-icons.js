@@ -250,12 +250,11 @@ function repositionHoleLabel(marker, map) {
 // could balloon to a huge, ugly blob on devices with a poor fix, e.g.
 // no real GPS hardware) — just the dot itself.
 //
-// Color: bright red, deliberately distinct from every color already in
-// use on these maps — magenta/pink and yellow (tee pads, baskets,
-// current-hole highlighting) and cyan (reserved for alternate tees) —
-// and one that reads clearly against green/brown satellite imagery,
-// unlike teal which blends into the grass.
-const LIVE_LOCATION_COLOR = '#E8290B';
+// Color: lime green (#2EFF2E) — distinct from magenta/pink and yellow
+// (tee pads, baskets, current-hole highlighting) and cyan (reserved
+// for alternate tees), and vivid enough to stand out clearly against
+// green/brown satellite imagery despite being a green itself.
+const LIVE_LOCATION_COLOR = '#2EFF2E';
 
 function startLiveLocationTracking(map) {
   if (!navigator.geolocation) return null;

@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=41"/>
+  <link rel="stylesheet" href="css/styles.css?v=44"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -205,36 +205,33 @@
 
   <!-- Enlarged Map Modal -->
   <div id="map-zoom-modal" class="custom-modal">
-    <div class="custom-modal-content" style="max-width:90vw;width:90vw;text-align:left;">
-      <h4>Course Map</h4>
-      <div id="map-zoom-map" style="width:100%;height:70vh;border-radius:0.4rem;"></div>
-      <div style="text-align:center;margin-top:0.75rem;">
-        <button id="close-map-zoom-btn" class="paper-btn">Close</button>
-      </div>
+    <div class="custom-modal-content map-popup-content">
+      <div id="map-zoom-map" class="map-popup-fill"></div>
+      <button id="close-map-zoom-btn" class="paper-btn map-popup-btn map-popup-btn-left">Close</button>
     </div>
   </div>
 
   <!-- Hole Placement Wizard Modal -->
   <div id="hole-placement-modal" class="custom-modal">
-    <div class="custom-modal-content" style="max-width:95vw;width:95vw;text-align:left;">
-      <p id="hole-placement-instructions" style="font-size:0.9rem;text-align:center;min-height:2.6rem;margin-bottom:0.5rem;"></p>
+    <div class="custom-modal-content map-popup-content">
+      <div id="hole-placement-map" class="map-popup-fill"></div>
 
-      <div id="hole-placement-map" style="width:100%;height:65vh;border-radius:0.4rem;margin-bottom:0.5rem;"></div>
-
-      <div id="hole-placement-rotation-row" class="hide" style="margin-bottom:0.75rem;">
-        <label for="hole-placement-rotation" style="font-size:0.8rem;">Tee facing direction</label>
-        <input type="range" id="hole-placement-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
+      <div class="map-popup-overlay-bar top">
+        <p id="hole-placement-instructions" style="font-size:0.9rem;text-align:center;margin:0;"></p>
+        <div id="hole-placement-rotation-row" class="hide" style="margin-top:0.4rem;">
+          <label for="hole-placement-rotation" style="font-size:0.8rem;">Tee facing direction</label>
+          <input type="range" id="hole-placement-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
+        </div>
       </div>
 
-      <div style="text-align:center;">
-        <button id="hole-placement-reuse-basket-btn" type="button" class="paper-btn hide">Use Existing Basket</button>
-        <button id="hole-placement-confirm-btn" type="button" class="paper-btn hide">Confirm</button>
-        <button id="hole-placement-remove-point-btn" type="button" class="paper-btn hide">Remove</button>
-        <button id="hole-placement-done-waypoints-btn" type="button" class="paper-btn hide">No More Waypoints</button>
-        <button id="hole-placement-previous-hole-btn" type="button" class="paper-btn hide">Previous Hole</button>
-        <button id="hole-placement-finish-btn" type="button" class="paper-btn hide">Finish</button>
-        <button id="hole-placement-cancel-btn" type="button" class="paper-btn">Cancel</button>
-      </div>
+      <button id="hole-placement-cancel-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Cancel</button>
+      <button id="hole-placement-previous-hole-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left-upper hide">Previous Hole</button>
+
+      <button id="hole-placement-remove-point-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right-upper hide">Remove</button>
+      <button id="hole-placement-reuse-basket-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Use Existing Basket</button>
+      <button id="hole-placement-confirm-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Confirm</button>
+      <button id="hole-placement-done-waypoints-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">No More Waypoints</button>
+      <button id="hole-placement-finish-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Finish</button>
     </div>
   </div>
 
@@ -318,12 +315,10 @@
 <!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
      and the "Start New Round" button (Select mode). -->
 <div id="course-list-modal" class="custom-modal">
-  <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
-    <h4>Courses</h4>
-    <div id="course-list-items" style="max-height:320px;overflow-y:auto;border:1px solid #ccc;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
-    <div style="text-align:center;">
-      <button id="course-list-select-btn" class="paper-btn">Select Course</button>
-      <button id="course-list-delete-btn" class="paper-btn hide">Delete Course</button>
+  <div class="custom-modal-content" style="max-width:520px;width:94%;text-align:left;">
+    <h4 style="text-align:center;">Courses</h4>
+    <div id="course-list-items" class="course-grid"></div>
+    <div style="text-align:center;margin-top:0.5rem;">
       <button id="course-list-close-btn" class="paper-btn">Close</button>
     </div>
   </div>
@@ -361,12 +356,12 @@
   <script src="js/db.js?v=3"></script>
   <script src="js/stock-courses.js?v=3"></script>
   <script src="js/ratings.js?v=1"></script>
-  <script src="js/map-icons.js?v=21"></script>
+  <script src="js/map-icons.js?v=22"></script>
   <script src="js/course-wizard.js?v=2"></script>
   <script src="js/admin-panel.js?v=8"></script>
   <script src="js/round.js?v=5"></script>
   <script src="js/putt-practice.js?v=2"></script>
-  <script src="js/main.js?v=90"></script>
+  <script src="js/main.js?v=92"></script>
   <script src="js/namePrompt.js?v=9"></script>
 
 

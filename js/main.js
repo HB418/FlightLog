@@ -483,58 +483,94 @@ async function loadCourseOptions() {
   const listEl = document.getElementById('course-list-items');
   if (!listEl) return;
 
-  selectedCourseListId = null;
   listEl.innerHTML = '';
 
   if (courses.length === 0) {
-    listEl.innerHTML = '<p style="padding:0.5rem;">No courses saved yet.</p>';
+    listEl.innerHTML = '<p style="padding:0.5rem;grid-column:1/-1;">No courses saved yet.</p>';
     return;
   }
 
   courses.forEach(c => {
-    const item = document.createElement('div');
-    item.className = 'course-list-item';
-    item.dataset.courseId = c.id;
+    const tile = document.createElement('div');
+    tile.className = 'course-grid-tile';
+
+    const raised = document.createElement('div');
+    raised.className = 'course-grid-tile-raised';
+    tile.appendChild(raised);
 
     if (c.logo) {
       const img = document.createElement('img');
-      img.className = 'course-list-item-logo';
+      img.className = 'course-grid-tile-logo';
       img.src = c.logo;
       img.alt = '';
-      item.appendChild(img);
+      raised.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'course-grid-tile-logo-placeholder';
+      placeholder.textContent = (c.name || '?').charAt(0).toUpperCase();
+      raised.appendChild(placeholder);
     }
 
-    const info = document.createElement('div');
-    info.className = 'course-list-item-info';
+    const infoRow = document.createElement('div');
+    infoRow.className = 'course-grid-tile-info';
+
     const nameEl = document.createElement('span');
-    nameEl.className = 'course-list-item-name';
+    nameEl.className = 'course-grid-tile-name';
     nameEl.textContent = c.name || `Course ${c.id}`;
+    infoRow.appendChild(nameEl);
+
     const metaEl = document.createElement('span');
-    metaEl.className = 'course-list-item-meta';
+    metaEl.className = 'course-grid-tile-meta';
     const holeCount = c.holes ? c.holes.length : 0;
     const totalPar = (c.holes || []).reduce((sum, h) => sum + (Number(h.par) || 0), 0);
-    const courseRating = computeCourseRating(c);
-    metaEl.textContent = holeCount + ' holes' + (totalPar ? (' \u00b7 Par ' + totalPar) : '') +
-      (courseRating != null ? (' \u00b7 Course Rating ' + courseRating.toFixed(1)) : '');
-    info.appendChild(nameEl);
-    info.appendChild(metaEl);
-    item.appendChild(info);
+    metaEl.textContent = holeCount + ' holes' + (totalPar ? (' \u00b7 Par ' + totalPar) : '');
+    infoRow.appendChild(metaEl);
 
-    item.addEventListener('click', () => {
-      document.querySelectorAll('#course-list-items .course-list-item.selected')
-        .forEach(el => el.classList.remove('selected'));
-      item.classList.add('selected');
-      selectedCourseListId = c.id;
-    });
+    raised.appendChild(infoRow);
 
-    listEl.appendChild(item);
+    tile.addEventListener('click', () => handleCourseTileClick(c));
+    listEl.appendChild(tile);
   });
+
+  // Fill out an incomplete last row (2 columns) with a placeholder tile.
+  if (courses.length % 2 === 1) {
+    const empty = document.createElement('div');
+    empty.className = 'course-grid-tile-empty';
+    empty.textContent = 'Course coming soon';
+    listEl.appendChild(empty);
+  }
+}
+
+async function handleCourseTileClick(course) {
+  document.getElementById('course-list-modal').classList.remove('active');
+
+  if (courseListMode === 'putt-practice') {
+    openPuttPracticeHolePicker(course);
+    return;
+  }
+  if (courseListMode === 'delete') {
+    const db = await openDiscTallyDB();
+    const isStock = !!course.stockKey;
+    if (isStock && !isAdminSession()) {
+      showGenericModal('"' + (course.name || 'This course') + '" is a built-in stock course and can\'t be deleted. Only the admin account can remove it.');
+      return;
+    }
+    const message = isStock
+      ? 'WARNING: "' + course.name + '" is a built-in STOCK course, not one you created. Deleting it removes it from THIS device, but it will reappear on a fresh install elsewhere since it ships with the app itself. This does not undo that — it only affects your local copy. Continue?'
+      : 'Deleting "' + (course.name || 'this course') + '" will remove its tee/basket map data, and it will no longer be selectable for stats or new rounds. This cannot be undone. Continue?';
+    showConfirmModal(message, async () => {
+      await deleteCourse(db, course.id);
+      await loadCourseOptions();
+      document.getElementById('course-list-modal').classList.add('active');
+    });
+    return;
+  }
+  // Default: 'select' mode
+  startRound(course);
 }
 
 async function openCourseListModal(mode) {
   courseListMode = mode;
   await loadCourseOptions();
-  const deleteBtn = document.getElementById('course-list-delete-btn');
-  if (deleteBtn) deleteBtn.classList.toggle('hide', mode !== 'delete');
   document.getElementById('course-list-modal').classList.add('active');
 }
