@@ -7,6 +7,8 @@ let headerMap = null;
 let headerMapLines = [];      // [{holeNumber, polyline}] — so the current hole's line can be colored red
 let mapZoomMapLines = [];
 let mapZoomMap = null;
+let headerMapLocationTracker = null;
+let mapZoomMapLocationTracker = null;
 
 function startRound(course) {
   const playerName = localStorage.getItem('userName') || 'Player 1';
@@ -55,12 +57,16 @@ function exitRound() {
   // Tear down the map so the next round (possibly a different course)
   // starts from a clean slate instead of showing this course's overlay.
   if (headerMap) {
+    stopLiveLocationTracking(headerMapLocationTracker);
+    headerMapLocationTracker = null;
     headerMap.remove();
     headerMap = null;
   }
   headerMapIcons = [];
   headerMapLines = [];
   if (mapZoomMap) {
+    stopLiveLocationTracking(mapZoomMapLocationTracker);
+    mapZoomMapLocationTracker = null;
     mapZoomMap.remove();
     mapZoomMap = null;
   }
@@ -213,6 +219,7 @@ function showHeaderMap() {
       maxNativeZoom: 19,
       attribution: 'Tiles &copy; Esri'
     }).addTo(headerMap);
+    headerMapLocationTracker = startLiveLocationTracking(headerMap);
 
     // Compute the current hole BEFORE overlay rendering, so centering
     // below still works even if renderCourseOverlay throws.
@@ -303,6 +310,7 @@ function openMapZoomModal() {
       maxNativeZoom: 19,
       attribution: 'Tiles &copy; Esri'
     }).addTo(mapZoomMap);
+    mapZoomMapLocationTracker = startLiveLocationTracking(mapZoomMap);
   }
 
   // Same layout-timing fix as the small map: don't set the view until

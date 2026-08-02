@@ -234,3 +234,65 @@ function repositionHoleLabel(marker, map) {
   const newPt = L.point(parentPt.x + offset.x * scale, parentPt.y + offset.y * scale);
   label.setLatLng(map.containerPointToLatLng(newPt));
 }
+
+/* ---------- Live location dot ---------- */
+// A "you are here" dot that follows the device's real-world location on
+// any Leaflet map, using the browser's continuous watchPosition (not a
+// one-time read) so it updates live as the user moves. Shared by every
+// map view in the app — round view, the enlarged map, the Admin panel,
+// the course-creation wizard, and Putt Practice — since anyone placing
+// or finding tees/baskets on the ground benefits from seeing where they
+// actually are relative to what's on the map.
+//
+// Standard phone GPS accuracy is typically only 10-16 feet in open sky,
+// and worse under tree canopy — common right where a tee pad sits. No
+// accuracy-radius circle is drawn (that visual didn't read well and
+// could balloon to a huge, ugly blob on devices with a poor fix, e.g.
+// no real GPS hardware) — just the dot itself.
+//
+// Color: bright red, deliberately distinct from every color already in
+// use on these maps — magenta/pink and yellow (tee pads, baskets,
+// current-hole highlighting) and cyan (reserved for alternate tees) —
+// and one that reads clearly against green/brown satellite imagery,
+// unlike teal which blends into the grass.
+const LIVE_LOCATION_COLOR = '#E8290B';
+
+function startLiveLocationTracking(map) {
+  if (!navigator.geolocation) return null;
+
+  const tracker = { watchId: null, marker: null };
+
+  tracker.watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const latlng = [pos.coords.latitude, pos.coords.longitude];
+
+      if (!tracker.marker) {
+        tracker.marker = L.circleMarker(latlng, {
+          radius: 7,
+          color: '#fff',
+          weight: 2,
+          fillColor: LIVE_LOCATION_COLOR,
+          fillOpacity: 1
+        }).addTo(map);
+      } else {
+        tracker.marker.setLatLng(latlng);
+      }
+    },
+    (err) => {
+      // Fails silently on the map itself — permission denied, no GPS
+      // signal, etc. shouldn't ever break the map. Logged for debugging.
+      console.warn('Live location tracking error:', err.message);
+    },
+    { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+  );
+
+  return tracker;
+}
+
+function stopLiveLocationTracking(tracker) {
+  if (!tracker) return;
+  if (navigator.geolocation && tracker.watchId != null) {
+    navigator.geolocation.clearWatch(tracker.watchId);
+  }
+  if (tracker.marker) tracker.marker.remove();
+}

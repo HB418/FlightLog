@@ -11,6 +11,7 @@ let holePlacementHoles = [];          // [{number, par}] read from the New Cours
 let holePlacementIndex = 0;           // which hole (0-based) we're currently placing
 let holePlacementSubStep = 'tee-tap'; // 'tee-tap' | 'tee-confirm' | 'basket-tap' | 'basket-confirm' | 'waypoint-tap' | 'waypoint-confirm' | 'done'
 let holePlacementMap = null;
+let holePlacementMapLocationTracker = null;
 let holePlacementTeeMarker = null;
 let holePlacementBasketMarker = null;
 let holePlacementCurrentWaypointMarker = null;
@@ -73,6 +74,8 @@ function resetCourseCreationState() {
   // Fully tear down the Leaflet map so no markers from a previous attempt
   // (before a Cancel) linger into the next one.
   if (holePlacementMap) {
+    stopLiveLocationTracking(holePlacementMapLocationTracker);
+    holePlacementMapLocationTracker = null;
     holePlacementMap.remove();
     holePlacementMap = null;
   }
@@ -210,6 +213,7 @@ function launchHolePlacementWizard() {
       attribution: 'Tiles &copy; Esri',
       detectRetina: true
     }).addTo(holePlacementMap);
+    holePlacementMapLocationTracker = startLiveLocationTracking(holePlacementMap);
     holePlacementMap.on('click', handleHolePlacementMapClick);
     holePlacementMap.on('zoomend', () => rescaleIconMarkers(holePlacementMap, holePlacementIcons));
   }

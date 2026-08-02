@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Admin Map Entry state
 let adminMap = null;
+let adminMapLocationTracker = null;
 let adminEditingCourseId = null;   // null = creating a new course
 let adminHoleMarkers = {};         // { [holeNumber]: { teeMarker, basketMarker } }
 let adminArmedAction = null;       // { holeNumber, kind: 'tee'|'basket' } — next map click places/moves this pin
@@ -183,6 +184,8 @@ function openAdminPanel() {
 
 function closeAdminPanel() {
   document.getElementById('admin-panel').classList.remove('active');
+  stopLiveLocationTracking(adminMapLocationTracker);
+  adminMapLocationTracker = null;
   if (adminMap) { adminMap.remove(); adminMap = null; }
   adminHoleMarkers = {};
 }
@@ -300,6 +303,8 @@ function openAdminEditor(course) {
   document.getElementById('admin-list-screen').classList.add('hide');
   document.getElementById('admin-editor-screen').classList.remove('hide');
 
+  stopLiveLocationTracking(adminMapLocationTracker);
+  adminMapLocationTracker = null;
   if (adminMap) { adminMap.remove(); adminMap = null; }
   const center = (course && course.lat != null && course.lng != null) ? [course.lat, course.lng] : [39.8283, -98.5795];
   const zoom = (course && course.lat != null) ? 17 : 6;
@@ -310,6 +315,7 @@ function openAdminEditor(course) {
     maxNativeZoom: 19,
     attribution: 'Tiles &copy; Esri'
   }).addTo(adminMap);
+  adminMapLocationTracker = startLiveLocationTracking(adminMap);
   adminMap.on('click', handleAdminMapClick);
   adminMap.on('zoomend', rescaleAdminMarkers);
   setTimeout(() => {
@@ -592,6 +598,8 @@ async function saveAdminCourse() {
 
   document.getElementById('admin-editor-screen').classList.add('hide');
   document.getElementById('admin-list-screen').classList.remove('hide');
+  stopLiveLocationTracking(adminMapLocationTracker);
+  adminMapLocationTracker = null;
   if (adminMap) { adminMap.remove(); adminMap = null; }
   adminHoleMarkers = {};
   renderAdminCourseList();

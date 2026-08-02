@@ -7,6 +7,7 @@
    shown during an actual round. */
 
 let puttPracticeMap = null;
+let puttPracticeMapLocationTracker = null;
 
 function openPuttPracticeHolePicker(course) {
   const holes = (course.holes || []).filter(h => h.basket);
@@ -39,6 +40,8 @@ function openPuttPracticeView(course, hole) {
   document.getElementById('putt-practice-screen').classList.add('active');
 
   if (puttPracticeMap) {
+    stopLiveLocationTracking(puttPracticeMapLocationTracker);
+    puttPracticeMapLocationTracker = null;
     puttPracticeMap.remove();
     puttPracticeMap = null;
   }
@@ -49,6 +52,7 @@ function openPuttPracticeView(course, hole) {
     maxNativeZoom: 19,
     attribution: 'Tiles &copy; Esri'
   }).addTo(puttPracticeMap);
+  puttPracticeMapLocationTracker = startLiveLocationTracking(puttPracticeMap);
 
   const center = [hole.basket.lat, hole.basket.lng];
 
@@ -86,6 +90,8 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('putt-practice-close-btn')?.addEventListener('click', () => {
     document.getElementById('putt-practice-screen').classList.remove('active');
     if (puttPracticeMap) {
+      stopLiveLocationTracking(puttPracticeMapLocationTracker);
+      puttPracticeMapLocationTracker = null;
       puttPracticeMap.remove();
       puttPracticeMap = null;
     }
