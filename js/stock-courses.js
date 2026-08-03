@@ -1,14 +1,16 @@
 /* js/stock-courses.js
    Courses that ship with the app itself, so they're available on any
    fresh install without needing to be manually re-entered in the Admin
-   panel. Seeded into IndexedDB once — tracked via each course's
-   stockKey in localStorage, not by checking the DB record itself.
+   panel. Reconciled against the actual database on every load — not a
+   one-time "seeded, never check again" flag — so a stock course that
+   goes missing for any reason (deleted, or a leftover from an older
+   version of this file) gets restored automatically. No manual console
+   command or DevTools access is ever required, on desktop or a phone.
 
-   stockKey is also kept ON the saved course record itself (not just
-   the localStorage seed-tracking list) — that's the permanent marker
-   the delete flow checks to tell a stock course apart from a regular
-   admin-created one, so a non-admin can't delete it and even the admin
-   gets an explicit extra warning before doing so.
+   stockKey is kept ON the saved course record itself — that's the
+   permanent marker the delete flow checks to tell a stock course apart
+   from a regular admin-created one, so a non-admin can't delete it and
+   even the admin gets an explicit extra warning before doing so.
 
    Course logos are plain image files in img/ (e.g. img/OTHDGC.png),
    referenced here by path — same as any other image in the app. Not
@@ -94,22 +96,49 @@ const STOCK_COURSES = [
   }
 ];
 
+// Reconciles the stock courses shipped in this file against what's
+// actually in the database — self-healing, no manual console command
+// or DevTools access ever required, even on a phone. Cheap fast path
+// on every normal load (just a count comparison); only does the full
+// scan-and-repair work when something's actually off.
 async function seedStockCourses() {
-  const seededRaw = localStorage.getItem('seededStockCourseKeys');
-  const seeded = seededRaw ? JSON.parse(seededRaw) : [];
   const db = await openDiscTallyDB();
-  let changed = false;
+  const existingCourses = await getAllCourses(db);
+  const existingStockCourses = existingCourses.filter(c => c.stockKey);
+
+  // Fast path: counts match, nothing to reconcile.
+  if (existingStockCourses.length === STOCK_COURSES.length) return;
+
+  // Counts don't match — scan the list.
+  const currentStockKeys = new Set(STOCK_COURSES.map(s => s.stockKey));
+  const existingStockKeys = new Set(existingStockCourses.map(c => c.stockKey));
+
+  // Add any stock course missing from the database — safe and
+  // additive, no confirmation needed. stockKey is kept ON the saved
+  // record (not stripped) — it's the permanent marker that lets the
+  // app tell a stock course apart from a regular admin-created one
+  // later, e.g. to protect it from being deleted by a non-admin.
   for (const stock of STOCK_COURSES) {
-    if (seeded.includes(stock.stockKey)) continue;
-    // stockKey is kept ON the saved record (not stripped) — it's the
-    // permanent marker that lets the app tell a stock course apart from
-    // a regular admin-created one later, e.g. to protect it from being
-    // deleted by a non-admin.
-    await addCourse(db, Object.assign({}, stock));
-    seeded.push(stock.stockKey);
-    changed = true;
+    if (!existingStockKeys.has(stock.stockKey)) {
+      await addCourse(db, Object.assign({}, stock));
+    }
   }
-  if (changed) {
-    localStorage.setItem('seededStockCourseKeys', JSON.stringify(seeded));
-  }
+
+  // Any course with a stockKey that no longer exists in the current
+  // source is orphaned (e.g. a leftover test duplicate that was
+  // removed from the source later) — ask before removing anything,
+  // since a course could have rounds/stats tied to it.
+  const orphaned = existingStockCourses.filter(c => !currentStockKeys.has(c.stockKey));
+  orphaned.forEach(promptRemoveOrphanedStockCourse);
+}
+
+function promptRemoveOrphanedStockCourse(course) {
+  showConfirmModal(
+    'Found a leftover stock course that\'s no longer part of the app: "' + (course.name || 'Unnamed course') + '". This looks like a duplicate from an earlier version. Delete it?',
+    async () => {
+      const db = await openDiscTallyDB();
+      await deleteCourse(db, course.id);
+      await loadCourseOptions();
+    }
+  );
 }
