@@ -83,7 +83,43 @@ function makeBasketIcon(scale, isCurrent) {
   });
 }
 
-// Marker registries so tee/basket icons can be rescaled together whenever
+// Second tee/basket — optional alternate positions for courses with
+// more than one layout. Second tee swaps active/inactive like the
+// primary tee; second basket has only one image (no active/inactive
+// distinction was provided for it). Hole-number labels for these use
+// "<number>A" in blue (#2E77FF) instead of the default label color, to
+// read clearly as "the alternate," not a second regular hole.
+const SECOND_TEE_ACTIVE_ICON_URL = 'img/2ndTeeActive.png?v=1';
+const SECOND_TEE_INACTIVE_ICON_URL = 'img/2ndTeeInActive.png?v=1';
+const SECOND_BASKET_ICON_URL = 'img/BasketBlue.png?v=1';
+const ALT_LABEL_COLOR = '#2E77FF';
+
+function makeSecondTeeDivIcon(rotationDeg, scale, isCurrent) {
+  scale = scale || 1;
+  const url = isCurrent ? SECOND_TEE_ACTIVE_ICON_URL : SECOND_TEE_INACTIVE_ICON_URL;
+  const w = Math.max(MIN_ICON_PX, Math.round(TEE_BASE_W * scale));
+  const h = Math.max(MIN_ICON_PX, Math.round(TEE_BASE_H * scale));
+  return L.divIcon({
+    html: '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain;display:block;transform:rotate(' + (rotationDeg || 0) + 'deg);"/>',
+    className: 'placement-div-icon',
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h / 2]
+  });
+}
+
+function makeSecondBasketIcon(scale) {
+  scale = scale || 1;
+  const w = Math.max(MIN_ICON_PX, Math.round(BASKET_BASE_W * scale));
+  const h = Math.max(MIN_ICON_PX, Math.round(BASKET_BASE_H * scale));
+  return L.divIcon({
+    html: '<img src="' + SECOND_BASKET_ICON_URL + '" style="width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;"/>',
+    className: 'placement-div-icon',
+    iconSize: [w, h],
+    iconAnchor: [w / 2, h]
+  });
+}
+
+
 // a map's zoom changes. Each entry: {marker, kind:'tee'|'basket',
 // holeNumber, isCurrent}. Tee markers also carry marker._rotationDeg so a
 // rescale (setIcon) doesn't lose the rotation the user set.
@@ -116,6 +152,10 @@ function rescaleIconMarkers(map, registry) {
   registry.forEach(entry => {
     if (entry.kind === 'tee') {
       entry.marker.setIcon(makeTeeDivIcon(entry.marker._rotationDeg || 0, scale, entry.isCurrent));
+    } else if (entry.kind === 'secondTee') {
+      entry.marker.setIcon(makeSecondTeeDivIcon(entry.marker._rotationDeg || 0, scale, entry.isCurrent));
+    } else if (entry.kind === 'secondBasket') {
+      entry.marker.setIcon(makeSecondBasketIcon(scale));
     } else {
       entry.marker.setIcon(makeBasketIcon(scale, entry.isCurrent));
     }
@@ -148,7 +188,7 @@ function rescaleHoleLabel(marker, map, draggableOverride) {
     : !!(oldLabel.dragging && oldLabel.dragging.enabled());
 
   map.removeLayer(oldLabel);
-  buildHoleLabelMarker(marker, map, text, baseOffset, draggable);
+  buildHoleLabelMarker(marker, map, text, baseOffset, draggable, oldLabel._isAlt);
 }
 
 function updateMarkerHoleLabel(marker, holeNumbers, options) {
@@ -169,7 +209,7 @@ function updateMarkerHoleLabel(marker, holeNumbers, options) {
   // course you already positioned numbers on), else the default spot.
   const baseOffset = options.baseOffset || { x: 16, y: 0 };
 
-  buildHoleLabelMarker(marker, map, text, baseOffset, draggable);
+  buildHoleLabelMarker(marker, map, text, baseOffset, draggable, options.isAlt);
 
   // Keep the label following the parent marker whenever IT moves (drag
   // or a programmatic setLatLng both fire Leaflet's 'move' event) —
@@ -191,15 +231,16 @@ function updateMarkerHoleLabel(marker, holeNumbers, options) {
 // existing one after its parent's icon was swapped (setIcon) was not
 // reliable (Leaflet's Handler.enable() no-ops if it thinks it's already
 // enabled, so it doesn't rebind to a new DOM element).
-function buildHoleLabelMarker(marker, map, text, baseOffset, draggable) {
+function buildHoleLabelMarker(marker, map, text, baseOffset, draggable, isAlt) {
   const scale = scaleForZoom(map);
   const parentPt = map.latLngToContainerPoint(marker.getLatLng());
   const labelPt = L.point(parentPt.x + baseOffset.x * scale, parentPt.y + baseOffset.y * scale);
   const labelLatLng = map.containerPointToLatLng(labelPt);
 
   const fontRem = labelFontRemForZoom(map);
+  const colorStyle = isAlt ? ('color:' + ALT_LABEL_COLOR + ';') : '';
   const icon = L.divIcon({
-    html: '<div class="hole-number-label-draggable" style="font-size:' + fontRem + 'rem;">' + text + '</div>',
+    html: '<div class="hole-number-label-draggable" style="font-size:' + fontRem + 'rem;' + colorStyle + '">' + text + '</div>',
     className: 'placement-div-icon',
     iconSize: [1, 1],
     iconAnchor: [0, 8]
@@ -207,6 +248,7 @@ function buildHoleLabelMarker(marker, map, text, baseOffset, draggable) {
   const labelMarker = L.marker(labelLatLng, { icon: icon, draggable: draggable, keyboard: false }).addTo(map);
   labelMarker._labelText = text;
   labelMarker._baseOffsetPx = baseOffset;
+  labelMarker._isAlt = isAlt;
 
   if (draggable) {
     // Recompute the stored base offset once the user finishes dragging,

@@ -268,6 +268,27 @@ function handleHolePlacementMapClick(e) {
     holePlacementCurrentWaypointMarker = L.marker(e.latlng, { icon: wpIcon, draggable: true }).addTo(holePlacementMap);
     holePlacementSubStep = 'waypoint-confirm';
     updateHolePlacementUI();
+
+  } else if (holePlacementSubStep === 'second-tee-tap') {
+    const scale = scaleForZoom(holePlacementMap);
+    const m = L.marker(e.latlng, { icon: makeSecondTeeDivIcon(0, scale), draggable: true }).addTo(holePlacementMap);
+    m._rotationDeg = 0;
+    holePlacementIcons.push({ marker: m, kind: 'secondTee' });
+    updateMarkerHoleLabel(m, [currentHoleNumber + 'A'], { isAlt: true });
+    pendingHoleGeo[holePlacementIndex].secondTee = { lat: e.latlng.lat, lng: e.latlng.lng, rotation: 0 };
+    holeMarkersHistory[holePlacementIndex].secondTeeMarker = m;
+    holePlacementSubStep = 'waypoint-tap';
+    updateHolePlacementUI();
+
+  } else if (holePlacementSubStep === 'second-basket-tap') {
+    const scale = scaleForZoom(holePlacementMap);
+    const m = L.marker(e.latlng, { icon: makeSecondBasketIcon(scale), draggable: true }).addTo(holePlacementMap);
+    holePlacementIcons.push({ marker: m, kind: 'secondBasket' });
+    updateMarkerHoleLabel(m, [currentHoleNumber + 'A'], { isAlt: true });
+    pendingHoleGeo[holePlacementIndex].secondBasket = { lat: e.latlng.lat, lng: e.latlng.lng };
+    holeMarkersHistory[holePlacementIndex].secondBasketMarker = m;
+    holePlacementSubStep = 'waypoint-tap';
+    updateHolePlacementUI();
   }
   // Any other sub-step: ignore taps.
 }
@@ -380,6 +401,9 @@ function clearCurrentHoleInProgressMarkers() {
   if (holePlacementCurrentWaypointMarker) { holePlacementMap.removeLayer(holePlacementCurrentWaypointMarker); holePlacementCurrentWaypointMarker = null; }
   holePlacementWaypointMarkers.forEach(m => holePlacementMap.removeLayer(m));
   holePlacementWaypointMarkers = [];
+  const hist = holeMarkersHistory[holePlacementIndex];
+  if (hist && hist.secondTeeMarker) { removeMarkerAndLabel(holePlacementMap, hist.secondTeeMarker); hist.secondTeeMarker = null; }
+  if (hist && hist.secondBasketMarker) { removeMarkerAndLabel(holePlacementMap, hist.secondBasketMarker); hist.secondBasketMarker = null; }
 }
 
 function goToPreviousHole() {
@@ -419,6 +443,8 @@ function updateHolePlacementUI() {
   const finishBtn = document.getElementById('hole-placement-finish-btn');
   const reuseBasketBtn = document.getElementById('hole-placement-reuse-basket-btn');
   const previousHoleBtn = document.getElementById('hole-placement-previous-hole-btn');
+  const secondTeeBtn = document.getElementById('hole-placement-second-tee-btn');
+  const secondBasketBtn = document.getElementById('hole-placement-second-basket-btn');
 
   rotationRow.classList.add('hide');
   confirmBtn.classList.add('hide');
@@ -426,6 +452,8 @@ function updateHolePlacementUI() {
   doneWaypointsBtn.classList.add('hide');
   finishBtn.classList.add('hide');
   reuseBasketBtn.classList.add('hide');
+  secondTeeBtn.classList.add('hide');
+  secondBasketBtn.classList.add('hide');
 
   const canGoBack = (holePlacementSubStep === 'done') ? holePlacementHoles.length > 0 : holePlacementIndex > 0;
   previousHoleBtn.classList.toggle('hide', !canGoBack);
@@ -454,11 +482,19 @@ function updateHolePlacementUI() {
     case 'waypoint-tap':
       instructionsEl.textContent = holeLabel + ": Optional — tap the map to add a point along the path, or click 'No More Waypoints' to continue.";
       doneWaypointsBtn.classList.remove('hide');
+      secondTeeBtn.classList.remove('hide');
+      secondBasketBtn.classList.remove('hide');
       break;
     case 'waypoint-confirm':
       instructionsEl.textContent = holeLabel + ': Drag to adjust, then Confirm (or Remove).';
       confirmBtn.classList.remove('hide');
       removeBtn.classList.remove('hide');
+      break;
+    case 'second-tee-tap':
+      instructionsEl.textContent = holeLabel + ': Tap the map to place the 2nd tee (optional alternate layout).';
+      break;
+    case 'second-basket-tap':
+      instructionsEl.textContent = holeLabel + ': Tap the map to place the 2nd basket (optional alternate layout).';
       break;
     case 'done':
       instructionsEl.textContent = 'All holes placed. Click Finish to save the course.';
@@ -561,6 +597,8 @@ async function finishCourseCreation() {
       if (geo.tee) hole.tee = geo.tee;
       if (geo.basket) hole.basket = geo.basket;
       if (geo.waypoints && geo.waypoints.length) hole.waypoints = geo.waypoints;
+      if (geo.secondTee) hole.secondTee = geo.secondTee;
+      if (geo.secondBasket) hole.secondBasket = geo.secondBasket;
     }
     holes.push(hole);
   });

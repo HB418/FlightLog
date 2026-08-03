@@ -9,6 +9,8 @@
 const DISCIT_API_BASE = 'https://discit-api.fly.dev/disc';
 
 let discSearchResults = [];   // last search's results, so picking one from the list works
+let discSelectionMode = false; // true while picking discs to remove (Remove button was pressed)
+let selectedDiscIds = new Set();
 let selectedFoundDisc = null; // the disc currently shown in the confirm-add modal
 
 function openAddDiscSearchModal() {
@@ -180,4 +182,174 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('image-lightbox-close-btn')?.addEventListener('click', () => {
     document.getElementById('image-lightbox-modal').classList.remove('active');
   });
+  document.getElementById('discs-list-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('discs-list-modal').classList.remove('active');
+  });
+  document.getElementById('discs-list-remove-btn')?.addEventListener('click', handleDiscRemoveOrDeleteClick);
 });
+
+async function openDiscsListModal() {
+  discSelectionMode = false;
+  selectedDiscIds.clear();
+  const removeBtn = document.getElementById('discs-list-remove-btn');
+  if (removeBtn) removeBtn.textContent = 'Remove';
+  await loadDiscsList();
+  document.getElementById('discs-list-modal').classList.add('active');
+}
+
+async function loadDiscsList() {
+  const db = await openDiscTallyDB();
+  const discs = await getAllDiscs(db);
+  const listEl = document.getElementById('discs-list-items');
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+
+  discs.forEach((d) => {
+    const tile = document.createElement('div');
+    tile.className = 'course-grid-tile';
+
+    const content = document.createElement('div');
+    content.className = 'course-grid-tile-content';
+    tile.appendChild(content);
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'course-grid-tile-select-checkbox' + (discSelectionMode ? '' : ' hide');
+    checkbox.checked = selectedDiscIds.has(d.id);
+    tile.appendChild(checkbox);
+
+    if (d.pic) {
+      const img = document.createElement('img');
+      img.className = 'course-grid-tile-logo no-paper-img-border';
+      img.src = d.pic;
+      img.alt = '';
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', (e) => {
+        e.stopPropagation(); // don't also trigger the tile's delete-confirm click
+        openImageLightbox(d.pic);
+      });
+      content.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'course-grid-tile-logo-placeholder';
+      placeholder.textContent = (d.name || '?').charAt(0).toUpperCase();
+      content.appendChild(placeholder);
+    }
+
+    const infoRow = document.createElement('div');
+    infoRow.className = 'course-grid-tile-info';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'course-grid-tile-name';
+    nameEl.textContent = d.name || 'Unnamed Disc';
+    infoRow.appendChild(nameEl);
+
+    const brandEl = document.createElement('span');
+    brandEl.className = 'course-grid-tile-location';
+    brandEl.textContent = (d.brand || '') + (d.category ? ' \u00b7 ' + d.category : '');
+    infoRow.appendChild(brandEl);
+
+    const hasFlightNums = [d.speed, d.glide, d.turn, d.fade].some(v => v != null && v !== '');
+    if (hasFlightNums) {
+      const speedGlideEl = document.createElement('span');
+      speedGlideEl.className = 'course-grid-tile-meta';
+      speedGlideEl.textContent = 'Speed ' + d.speed + ' \u00b7 Glide ' + d.glide;
+      infoRow.appendChild(speedGlideEl);
+
+      const turnFadeEl = document.createElement('span');
+      turnFadeEl.className = 'course-grid-tile-meta';
+      turnFadeEl.textContent = 'Turn ' + d.turn + ' \u00b7 Fade ' + d.fade;
+      infoRow.appendChild(turnFadeEl);
+    } else {
+      const noneEl = document.createElement('span');
+      noneEl.className = 'course-grid-tile-meta';
+      noneEl.textContent = 'No flight numbers on file';
+      infoRow.appendChild(noneEl);
+    }
+
+    if (d.stability) {
+      const stabilityEl = document.createElement('span');
+      stabilityEl.className = 'course-grid-tile-location';
+      stabilityEl.textContent = d.stability;
+      infoRow.appendChild(stabilityEl);
+    }
+
+    content.appendChild(infoRow);
+
+    tile.addEventListener('click', () => {
+      if (discSelectionMode) {
+        if (selectedDiscIds.has(d.id)) selectedDiscIds.delete(d.id);
+        else selectedDiscIds.add(d.id);
+        const cb = tile.querySelector('.course-grid-tile-select-checkbox');
+        if (cb) cb.checked = selectedDiscIds.has(d.id);
+        return;
+      }
+      // Browsing only — deletion now goes through Remove/Delete.
+    });
+
+    listEl.appendChild(tile);
+  });
+
+  // Always show a full list of 10 slots — fill any remaining empty
+  // slots with "Disc coming soon" placeholders, same as the Courses
+  // list. If there are more than 10 discs, no placeholders are added
+  // and the list just grows past 10 as needed.
+  const minSlots = 10;
+  for (let i = discs.length; i < minSlots; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'course-grid-tile-empty';
+    empty.textContent = 'Disc coming soon';
+    listEl.appendChild(empty);
+  }
+}
+
+function handleDiscRemoveOrDeleteClick() {
+  const btn = document.getElementById('discs-list-remove-btn');
+  if (!discSelectionMode) {
+    discSelectionMode = true;
+    btn.textContent = 'Delete';
+    showGenericModal('Tap the discs you want to remove, then press Delete.');
+    loadDiscsList();
+    return;
+  }
+  if (selectedDiscIds.size === 0) {
+    showGenericModal('No discs selected. Tap a disc first, or press Close to cancel.');
+    return;
+  }
+  confirmAndDeleteSelectedDiscs();
+}
+
+function resetDiscSelectionMode() {
+  discSelectionMode = false;
+  selectedDiscIds.clear();
+  const btn = document.getElementById('discs-list-remove-btn');
+  if (btn) btn.textContent = 'Remove';
+}
+
+async function confirmAndDeleteSelectedDiscs() {
+  const db = await openDiscTallyDB();
+  const allDiscs = await getAllDiscs(db);
+  const selected = allDiscs.filter(d => selectedDiscIds.has(d.id));
+
+  let message = 'You are about to permanently remove:\n';
+  selected.forEach(d => {
+    message += '\u2022 ' + (d.name || 'Unnamed disc') + '\n';
+  });
+  message += '\nThis cannot be undone.\n\nContinue?';
+
+  showConfirmModal(
+    message,
+    async () => {
+      for (const d of selected) {
+        await deleteDisc(db, d.id);
+      }
+      resetDiscSelectionMode();
+      await loadDiscsList();
+    },
+    () => {
+      resetDiscSelectionMode();
+      loadDiscsList();
+    }
+  );
+}

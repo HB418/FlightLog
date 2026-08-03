@@ -4,8 +4,11 @@
    into map-icons.js, course-wizard.js, admin-panel.js, and round.js. */
 
 let pendingConfirmCallback = null;
+let pendingCancelCallback = null;
 let selectedCourseListId = null; // currently-selected course row in the course-list-modal
 let courseListMode = 'select';   // 'select' | 'delete' | 'putt-practice' — what the course-list-modal does when you pick a course
+let courseSelectionMode = false; // true while picking courses to remove (Remove button was pressed)
+let selectedCourseIds = new Set();
 
 document.addEventListener('DOMContentLoaded', function () {
   seedStockCourses().then(loadCourseOptions);
@@ -49,8 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('admin-find-location-btn')?.addEventListener('click', handleAdminFindLocation);
-  document.getElementById('admin-location-search')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleAdminFindLocation(); }
+  ['admin-course-address', 'admin-course-location'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); handleAdminFindLocation(); }
+    });
   });
 
   document.getElementById('admin-ref-image-opacity')?.addEventListener('input', (e) => {
@@ -168,6 +173,26 @@ document.addEventListener('DOMContentLoaded', function () {
     adminArmedAction = { holeNumber: adminSelectedHole, kind: 'basket' };
     showGenericModal('Click the map to place/move the basket for Hole ' + adminSelectedHole + '.');
   });
+  document.getElementById('admin-set-second-tee-btn')?.addEventListener('click', () => {
+    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
+    const holeData = adminHoleMarkers[adminSelectedHole];
+    if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
+      showGenericModal('Set the main tee and basket for this hole first.');
+      return;
+    }
+    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondTee' };
+    showGenericModal('Click the map to place/move the 2nd tee for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
+  });
+  document.getElementById('admin-set-second-basket-btn')?.addEventListener('click', () => {
+    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
+    const holeData = adminHoleMarkers[adminSelectedHole];
+    if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
+      showGenericModal('Set the main tee and basket for this hole first.');
+      return;
+    }
+    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondBasket' };
+    showGenericModal('Click the map to place/move the 2nd basket for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
+  });
   document.getElementById('admin-add-waypoint-btn')?.addEventListener('click', () => {
     if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
     adminArmedAction = { holeNumber: adminSelectedHole, kind: 'waypoint' };
@@ -220,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('course-list-cancel-btn')?.addEventListener('click', () => {
     document.getElementById('course-list-modal').classList.remove('active');
   });
+  document.getElementById('course-list-remove-btn')?.addEventListener('click', handleCourseRemoveOrDeleteClick);
 
   document.getElementById('course-list-select-btn')?.addEventListener('click', async () => {
     const items = document.querySelectorAll('#course-list-items .course-list-item');
@@ -295,6 +321,14 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('hole-placement-confirm-btn')?.addEventListener('click', handleHolePlacementConfirm);
   document.getElementById('hole-placement-remove-point-btn')?.addEventListener('click', handleRemoveCurrentWaypoint);
   document.getElementById('hole-placement-done-waypoints-btn')?.addEventListener('click', handleDoneWithWaypoints);
+  document.getElementById('hole-placement-second-tee-btn')?.addEventListener('click', () => {
+    holePlacementSubStep = 'second-tee-tap';
+    updateHolePlacementUI();
+  });
+  document.getElementById('hole-placement-second-basket-btn')?.addEventListener('click', () => {
+    holePlacementSubStep = 'second-basket-tap';
+    updateHolePlacementUI();
+  });
   document.getElementById('hole-placement-previous-hole-btn')?.addEventListener('click', goToPreviousHole);
   document.getElementById('hole-placement-reuse-basket-btn')?.addEventListener('click', openReuseBasketModal);
   document.getElementById('hole-placement-finish-btn')?.addEventListener('click', () => {
@@ -388,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('menu-discs-btn')?.addEventListener('click', () => {
     document.getElementById('hamburger-menu-modal').classList.remove('active');
-    showGenericModal('Discs is coming soon.');
+    openDiscsListModal();
   });
   document.getElementById('menu-ratings-info-btn')?.addEventListener('click', () => {
     document.getElementById('hamburger-menu-modal').classList.remove('active');
@@ -438,11 +472,15 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('confirm-modal').classList.remove('active');
     const cb = pendingConfirmCallback;
     pendingConfirmCallback = null;
+    pendingCancelCallback = null;
     if (cb) cb();
   });
   document.getElementById('confirm-no-btn')?.addEventListener('click', () => {
     document.getElementById('confirm-modal').classList.remove('active');
     pendingConfirmCallback = null;
+    const cancelCb = pendingCancelCallback;
+    pendingCancelCallback = null;
+    if (cancelCb) cancelCb();
   });
 
   document.getElementById('clear-all-stats-btn')?.addEventListener('click', () => {
@@ -456,9 +494,10 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-function showConfirmModal(message, onConfirm) {
+function showConfirmModal(message, onConfirm, onCancel) {
   document.getElementById('confirm-modal-message').textContent = message;
   pendingConfirmCallback = onConfirm;
+  pendingCancelCallback = onCancel || null;
   document.getElementById('confirm-modal').classList.add('active');
 }
 
@@ -509,6 +548,14 @@ async function loadCourseOptions() {
     content.className = 'course-grid-tile-content';
     tile.appendChild(content);
 
+    if (courseListMode === 'delete') {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'course-grid-tile-select-checkbox' + (courseSelectionMode ? '' : ' hide');
+      checkbox.checked = selectedCourseIds.has(c.id);
+      tile.appendChild(checkbox);
+    }
+
     if (c.logo) {
       const img = document.createElement('img');
       img.className = 'course-grid-tile-logo';
@@ -553,7 +600,17 @@ async function loadCourseOptions() {
 
     content.appendChild(infoRow);
 
-    tile.addEventListener('click', () => handleCourseTileClick(c));
+    tile.addEventListener('click', () => {
+      if (courseSelectionMode) {
+        if (selectedCourseIds.has(c.id)) selectedCourseIds.delete(c.id);
+        else selectedCourseIds.add(c.id);
+        const checkbox = tile.querySelector('.course-grid-tile-select-checkbox');
+        if (checkbox) checkbox.checked = selectedCourseIds.has(c.id);
+        return;
+      }
+      if (courseListMode === 'delete') return; // browsing only until Remove is pressed
+      handleCourseTileClick(c);
+    });
     listEl.appendChild(tile);
   });
 
@@ -577,29 +634,91 @@ async function handleCourseTileClick(course) {
     openPuttPracticeHolePicker(course);
     return;
   }
-  if (courseListMode === 'delete') {
-    const db = await openDiscTallyDB();
-    const isStock = !!course.stockKey;
-    if (isStock && !isAdminSession()) {
-      showGenericModal('"' + (course.name || 'This course') + '" is a built-in stock course and can\'t be deleted. Only the admin account can remove it.');
-      return;
-    }
-    const message = isStock
-      ? 'WARNING: "' + course.name + '" is a built-in STOCK course, not one you created. Deleting it removes it from THIS device, but it will reappear on a fresh install elsewhere since it ships with the app itself. This does not undo that — it only affects your local copy. Continue?'
-      : 'Deleting "' + (course.name || 'this course') + '" will remove its tee/basket map data, and it will no longer be selectable for stats or new rounds. This cannot be undone. Continue?';
-    showConfirmModal(message, async () => {
-      await deleteCourse(db, course.id);
-      await loadCourseOptions();
-      document.getElementById('course-list-modal').classList.add('active');
-    });
-    return;
-  }
   // Default: 'select' mode
   startRound(course);
 }
 
 async function openCourseListModal(mode) {
   courseListMode = mode;
+  courseSelectionMode = false;
+  selectedCourseIds.clear();
   await loadCourseOptions();
+  // "Cancel" reads more naturally when the person is mid-way through
+  // starting a round (they haven't committed to anything yet); "Close"
+  // fits every other use of this same shared modal (browsing/deleting
+  // from the Courses list, etc.), where nothing is "in progress" to cancel.
+  document.getElementById('course-list-cancel-btn').textContent = (mode === 'select') ? 'Cancel' : 'Close';
+  const removeBtn = document.getElementById('course-list-remove-btn');
+  removeBtn.classList.toggle('hide', mode !== 'delete');
+  removeBtn.textContent = 'Remove';
   document.getElementById('course-list-modal').classList.add('active');
+}
+
+function handleCourseRemoveOrDeleteClick() {
+  const btn = document.getElementById('course-list-remove-btn');
+  if (!courseSelectionMode) {
+    courseSelectionMode = true;
+    btn.textContent = 'Delete';
+    showGenericModal('Tap the courses you want to remove, then press Delete.');
+    loadCourseOptions();
+    return;
+  }
+  if (selectedCourseIds.size === 0) {
+    showGenericModal('No courses selected. Tap a course first, or press Close to cancel.');
+    return;
+  }
+  confirmAndDeleteSelectedCourses();
+}
+
+function resetCourseSelectionMode() {
+  courseSelectionMode = false;
+  selectedCourseIds.clear();
+  const btn = document.getElementById('course-list-remove-btn');
+  if (btn) btn.textContent = 'Remove';
+}
+
+async function confirmAndDeleteSelectedCourses() {
+  const db = await openDiscTallyDB();
+  const allCourses = await getAllCourses(db);
+  const selected = allCourses.filter(c => selectedCourseIds.has(c.id));
+
+  const admin = isAdminSession();
+  const blocked = selected.filter(c => c.stockKey && !admin);
+  const deletable = selected.filter(c => !(c.stockKey && !admin));
+
+  let message = '';
+  if (deletable.length > 0) {
+    message += 'You are about to permanently delete:\n';
+    deletable.forEach(c => {
+      message += '\u2022 ' + (c.name || 'Unnamed course') +
+        (c.stockKey ? ' (built-in stock course \u2014 will reappear on a fresh install elsewhere, but not on this device)' : '') + '\n';
+    });
+    message += '\nThis removes their tee/basket map data, and they will no longer be selectable for stats or new rounds. This cannot be undone.';
+  }
+  if (blocked.length > 0) {
+    message += (deletable.length > 0 ? '\n\n' : '') + 'These are built-in stock courses and can\'t be deleted by a non-admin account, so they will be skipped:\n';
+    blocked.forEach(c => { message += '\u2022 ' + (c.name || 'Unnamed course') + '\n'; });
+  }
+
+  if (deletable.length === 0) {
+    showGenericModal(message || 'Nothing selected can be deleted.');
+    resetCourseSelectionMode();
+    loadCourseOptions();
+    return;
+  }
+
+  showConfirmModal(
+    message + '\n\nContinue?',
+    async () => {
+      for (const c of deletable) {
+        await deleteCourse(db, c.id);
+      }
+      resetCourseSelectionMode();
+      await loadCourseOptions();
+    },
+    () => {
+      resetCourseSelectionMode();
+      loadCourseOptions();
+    }
+  );
 }

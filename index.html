@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=57"/>
+  <link rel="stylesheet" href="css/styles.css?v=76"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -188,6 +188,18 @@
     </div>
   </div>
 
+  <!-- Add Player (OG Mode) -->
+  <div id="og-add-player-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:400px;width:90%;">
+      <h4>Add Player</h4>
+      <input type="text" id="og-add-player-name" placeholder="Player name" style="width:100%;margin-bottom:0.75rem;"/>
+      <div style="text-align:center;">
+        <button id="og-save-add-player-btn" class="paper-btn">Add</button>
+        <button id="og-cancel-add-player-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats Modal -->
   <div id="stats-modal" class="custom-modal">
     <div class="custom-modal-content" style="max-width:520px;width:95%;max-height:80vh;overflow-y:auto;text-align:left;">
@@ -241,6 +253,8 @@
       <button id="hole-placement-confirm-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Confirm</button>
       <button id="hole-placement-done-waypoints-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">No More Waypoints</button>
       <button id="hole-placement-finish-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Finish</button>
+      <button id="hole-placement-second-tee-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-center-left hide">Add 2nd Tee</button>
+      <button id="hole-placement-second-basket-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-center-right hide">Add 2nd Basket</button>
     </div>
   </div>
 
@@ -385,6 +399,9 @@
   <div class="col-12 button-row hide" id="continue-round-row">
     <button id="continue-round-btn" class="btn btn--big btn--purple-blue">Continue Round</button>
   </div>
+  <div class="col-12 button-row hide" id="continue-og-round-row">
+    <button id="continue-og-round-btn" class="btn btn--big btn--purple-blue">Continue OG Round</button>
+  </div>
   <div class="col-12 button-row">
     <button id="start-round-btn" class="btn btn--big btn--purple-blue">Start New Round</button>
     <button id="add-course-btn" class="btn btn--big btn--purple-blue">Add Course</button>
@@ -395,6 +412,7 @@
   </div>
   <div class="col-12 button-row">
     <button id="putt-practice-btn" class="btn btn--big btn--purple-blue">Putt Practice</button>
+    <button id="og-mode-btn" class="btn btn--big btn--purple-blue">OG</button>
   </div>
   <div class="col-12 button-row">
     <button id="admin-map-entry-btn" class="btn btn--big btn--purple-blue admin-only-btn">Admin Map Entry</button>
@@ -425,7 +443,18 @@
   <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;">
     <h4 style="text-align:center;">Courses</h4>
     <div id="course-list-items" class="course-grid"></div>
-    <button id="course-list-cancel-btn" class="paper-btn">Cancel</button>
+    <button id="course-list-cancel-btn" class="paper-btn">Close</button>
+    <button id="course-list-remove-btn" class="paper-btn">Remove</button>
+  </div>
+</div>
+
+<!-- Discs List Modal -->
+<div id="discs-list-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;">
+    <h4 style="text-align:center;">My Discs</h4>
+    <div id="discs-list-items" class="course-grid"></div>
+    <button id="discs-list-cancel-btn" class="paper-btn">Close</button>
+    <button id="discs-list-remove-btn" class="paper-btn">Remove</button>
   </div>
 </div>
 
@@ -455,6 +484,19 @@
     </div>
   </div>
 
+  <!-- OG Mode: one hole at a time, pick your own par, no course/map needed -->
+  <div id="og-mode-card" class="scorecard-panel hide">
+    <div id="og-mode-container"></div>
+    <div class="button-row og-nav-row">
+      <button type="button" id="og-next-hole-btn" class="btn btn--big btn--purple-blue">Next Hole</button>
+      <button type="button" id="og-prev-hole-btn" class="btn btn--big btn--purple-blue">Prev Hole</button>
+    </div>
+    <div class="button-row og-nav-row">
+      <button id="og-finish-btn" class="btn btn--big btn--purple-blue">Finish Round</button>
+      <button id="og-cancel-btn" class="btn btn--big btn--purple-blue">Cancel Round</button>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js?v=2"></script>
@@ -462,13 +504,14 @@
   <script src="js/db.js?v=4"></script>
   <script src="js/stock-courses.js?v=9"></script>
   <script src="js/ratings.js?v=1"></script>
-  <script src="js/map-icons.js?v=22"></script>
-  <script src="js/course-wizard.js?v=4"></script>
-  <script src="js/admin-panel.js?v=10"></script>
-  <script src="js/round.js?v=6"></script>
+  <script src="js/map-icons.js?v=23"></script>
+  <script src="js/course-wizard.js?v=5"></script>
+  <script src="js/admin-panel.js?v=12"></script>
+  <script src="js/round.js?v=7"></script>
   <script src="js/putt-practice.js?v=2"></script>
-  <script src="js/discs.js?v=2"></script>
-  <script src="js/main.js?v=101"></script>
+  <script src="js/discs.js?v=8"></script>
+  <script src="js/og-mode.js?v=7"></script>
+  <script src="js/main.js?v=107"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 
@@ -658,16 +701,14 @@
           </div>
 
           <div style="margin-bottom:0.75rem;">
-            <label for="admin-course-location">Location (e.g. "Newington, NH")</label>
+            <label for="admin-course-location">City, State</label>
             <input type="text" id="admin-course-location" style="width:100%;"/>
           </div>
 
-          <label for="admin-location-search">Find Location on Map</label>
-          <div style="display:flex;gap:0.5rem;margin-bottom:0.25rem;">
-            <input type="text" id="admin-location-search" placeholder="Address, town, or course name" style="flex:1;"/>
-            <button type="button" id="admin-find-location-btn" class="paper-btn">Find</button>
+          <div style="flex-shrink:0;margin-top:0.4rem;margin-bottom:0.75rem;">
+            <button type="button" id="admin-find-location-btn" class="paper-btn" style="width:100%;position:relative;z-index:1;display:block;">Find on Map</button>
+            <div id="admin-location-status" style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;position:relative;z-index:1;"></div>
           </div>
-          <div id="admin-location-status" style="font-size:0.8rem;opacity:0.8;margin-bottom:0.75rem;"></div>
 
           <label for="admin-course-logo-input">Course Logo</label>
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:nowrap;">
@@ -697,14 +738,21 @@
             <div class="admin-map-toolbar-buttons">
               <button type="button" id="admin-set-tee-btn" class="paper-btn">Set Tee</button>
               <button type="button" id="admin-set-basket-btn" class="paper-btn">Set Basket</button>
+              <button type="button" id="admin-set-second-tee-btn" class="paper-btn">Set 2nd Tee</button>
+              <button type="button" id="admin-set-second-basket-btn" class="paper-btn">Set 2nd Basket</button>
               <button type="button" id="admin-add-waypoint-btn" class="paper-btn">Add Waypoint</button>
               <button type="button" id="admin-clear-waypoints-btn" class="paper-btn">Clear Waypoints</button>
-              <label for="admin-rotation-slider" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>
-              <input type="range" id="admin-rotation-slider" min="-180" max="180" value="0"/>
-              <span class="admin-toolbar-sep"></span>
-              <label for="admin-ref-image-opacity" style="font-size:0.8rem;white-space:nowrap;">Ref. opacity:</label>
-              <input type="range" id="admin-ref-image-opacity" min="0" max="100" value="50"/>
-              <button type="button" id="admin-remove-ref-image-btn" class="paper-btn hide">Remove Ref.</button>
+              <div class="admin-toolbar-sliders-col">
+                <div class="admin-toolbar-sliders-row">
+                  <label for="admin-rotation-slider" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>
+                  <input type="range" id="admin-rotation-slider" min="-180" max="180" value="0"/>
+                </div>
+                <div class="admin-toolbar-sliders-row">
+                  <label for="admin-ref-image-opacity" style="font-size:0.8rem;white-space:nowrap;">Ref. opacity:</label>
+                  <input type="range" id="admin-ref-image-opacity" min="0" max="100" value="50"/>
+                  <button type="button" id="admin-remove-ref-image-btn" class="paper-btn hide">Remove Ref.</button>
+                </div>
+              </div>
               <div class="admin-toolbar-lock-hazards-col">
                 <div class="admin-toolbar-lock-hazards-row">
                   <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-lock-map-checkbox"/><span>Lock map</span></label>

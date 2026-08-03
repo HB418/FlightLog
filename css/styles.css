@@ -346,6 +346,30 @@ body.dark-mode .admin-toolbar-sep {
 .admin-map-toolbar-buttons input[type="range"] {
   width: 8rem;
 }
+/* Sliders live in their own stacked block, separate from the buttons
+   row — keeping them there (instead of inline with everything else)
+   stopped the buttons row from pushing the lock/hazard checkboxes off
+   screen once more buttons were added. */
+.admin-toolbar-sliders-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-left: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid #ddd;
+  flex: 0 0 auto;
+}
+body.dark-mode .admin-toolbar-sliders-col {
+  border-left-color: #555;
+}
+.admin-toolbar-sliders-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.admin-toolbar-sliders-row input[type="range"] {
+  width: 10rem;
+}
 .admin-toolbar-lock-hazards-col {
   display: flex;
   flex-direction: column;
@@ -873,6 +897,19 @@ body.dark-mode .hole-record-box {
 #confirm-modal {
   z-index: 3600;
 }
+/* Same reasoning as #confirm-modal above: these get triggered while
+   another modal (course list, discs list, add-disc search, etc.) is
+   still open, so they need to render above it rather than tie on
+   z-index and lose based on DOM order. generic-modal shares confirm's
+   tier since the two aren't shown on top of each other in normal use;
+   the image lightbox goes higher since it opens from on top of an
+   already-open confirm/details screen. */
+#generic-modal {
+  z-index: 3600;
+}
+#image-lightbox-modal {
+  z-index: 3650;
+}
 .custom-modal.active {
   display: flex;
 }
@@ -905,10 +942,59 @@ body.dark-mode .hole-record-box {
 #course-list-cancel-btn {
   position: absolute;
   bottom: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0.75rem;
   z-index: 10;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+#course-list-remove-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* Discs List modal: same "one scrollbar, floating buttons" treatment
+   as the Courses list. */
+#discs-list-modal .custom-modal-content {
+  overflow: hidden;
+  position: relative;
+}
+#discs-list-modal .course-grid {
+  padding-bottom: 4rem;
+}
+#discs-list-cancel-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  z-index: 10;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+#discs-list-remove-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* Selection-mode checkbox shown top-right on a course/disc tile while
+   picking items to remove. Sits above the tile's own click handling
+   (which is disabled while in selection mode) so tapping the tile just
+   toggles this instead of doing the tile's normal action. */
+.course-grid-tile-select-checkbox {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 5;
+  width: 1.3rem;
+  height: 1.3rem;
+  cursor: pointer;
+}
+/* Renders the \n line breaks used when listing multiple courses/discs
+   about to be deleted, since textContent doesn't turn \n into <br>. */
+#confirm-modal-message {
+  white-space: pre-line;
 }
 
 /* Full-size map popups — the map fills nearly the whole modal instead
@@ -954,6 +1040,19 @@ body.dark-mode .hole-record-box {
 .map-popup-btn-right-upper {
   bottom: 3.4rem;
   right: 0.6rem;
+}
+/* Optional-extras row, bottom-center — for things like Add 2nd
+   Tee/Basket that need to coexist alongside whatever's in the
+   corner slots (e.g. "No More Waypoints"), not replace it. */
+.map-popup-btn-center-left {
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(calc(-100% - 0.3rem));
+}
+.map-popup-btn-center-right {
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(0.3rem);
 }
 /* A translucent bar for anything that isn't a simple button (an
    instruction line, a slider) that still needs to sit over the map
@@ -1463,6 +1562,31 @@ body.dark-mode a {
   color: var(--mustard);
 }
 
+/* Discs list needs 5 lines on the right (name, brand/category, speed+
+   glide, turn+fade, stability) instead of the 3 the Courses list uses
+   — scoped here so Courses isn't affected. Taller tile, smaller image
+   and text, and text allowed to wrap instead of a fixed nowrap line,
+   so nothing runs off screen on a phone. */
+#discs-list-items .course-grid-tile {
+  height: 10rem;
+}
+#discs-list-items .course-grid-tile-logo {
+  max-width: 42%;
+}
+#discs-list-items .course-grid-tile-info {
+  font-size: 0.75rem;
+  gap: 0.08rem;
+}
+#discs-list-items .course-grid-tile-name,
+#discs-list-items .course-grid-tile-meta,
+#discs-list-items .course-grid-tile-location {
+  white-space: normal;
+  line-height: 1.2;
+}
+#discs-list-items .course-grid-tile-empty {
+  height: 10rem;
+}
+
 /* Reusable: strips PaperCSS's default hand-drawn border/shadow effect
    from an <img> tag, for anywhere a clean image is wanted instead
    (disc pictures, etc.) without repeating the same overrides inline. */
@@ -1491,4 +1615,109 @@ body.dark-mode a {
 }
 #image-lightbox-modal button {
   margin-top: 0.75rem;
+}
+
+/* OG Mode: current-hole entry rows (Par/Add Player header, one row per
+   player) and the read-only history below. Font-size on labels bumped
+   to visually match a <select>'s rendered text (selects render larger
+   than a plain <span> at the "same" font-size due to native OS
+   chrome), and every gap increased to be unmistakably, generously
+   spaced instead of pinched together. */
+.og-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.2rem;
+}
+/* Tight, fixed-width label column shared by every row (Par, each
+   player's entry row, and every history row below) — narrow enough
+   that Par sits right next to its own dropdown, but still wide enough
+   for "Total Par" and typical names, so every row's controls/numbers
+   still start at the same x position instead of drifting per-row. */
+.og-label {
+  flex: 0 0 4.5rem;
+  font-size: 1.1rem;
+  font-family: inherit;
+  font-weight: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Par's dropdown, the score dropdowns, and Add Player are all the
+   exact same compact size, height, and vertical position — margin
+   reset to 0 on all of them (PaperCSS's own button default margin was
+   what made Add Player float higher than the dropdowns next to it). */
+.og-compact-control {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  font-family: inherit;
+  height: 2.2rem;
+  line-height: 1.2;
+  padding: 0 0.6rem;
+  min-height: 0;
+  margin: 0;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+/* Add Player docks to the far right of the header row. Score dropdowns
+   in each player's row also dock far right via .og-push-right — Par's
+   dropdown does NOT get this, so it stays right next to "Par". */
+.og-row-header .paper-btn.og-compact-control {
+  margin-left: auto;
+}
+.og-push-right {
+  margin-left: auto;
+}
+/* Explicit matching width on both — letting them auto-size to content
+   made them differ, since Par only ever shows 1 digit (2-8) while
+   score can show 2 ("15"), so their natural widths were never equal. */
+#og-par-select,
+.og-score-select {
+  width: 2.75rem;
+}
+.og-divider {
+  border: none;
+  border-top: 1px solid #888;
+  margin: 1.1rem 0;
+}
+body.dark-mode .og-divider {
+  border-top-color: #666;
+}
+.og-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+.og-history-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.og-history-nums {
+  display: flex;
+  gap: 0.6rem;
+  flex: 1 1 auto;
+  overflow-x: auto;
+}
+.og-history-total {
+  font-weight: bold;
+  color: var(--teal);
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+body.dark-mode .og-history-total {
+  color: var(--mustard);
+}
+/* Generous, even spacing around and between the two button rows below
+   the history, instead of them crowding right up against it. */
+#og-mode-card {
+  padding-top: 0.5rem;
+}
+#og-mode-container {
+  padding-bottom: 1.1rem;
+}
+#og-mode-card .button-row {
+  margin: 0.4rem 0;
 }

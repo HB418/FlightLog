@@ -122,9 +122,11 @@ function setAdminMapLocked(locked) {
 }
 
 async function handleAdminFindLocation() {
-  const query = document.getElementById('admin-location-search').value.trim();
+  const address = document.getElementById('admin-course-address').value.trim();
+  const location = document.getElementById('admin-course-location').value.trim();
+  const query = [address, location].filter(Boolean).join(', ');
   const statusEl = document.getElementById('admin-location-status');
-  if (!query) { statusEl.textContent = 'Enter an address, town, or course name to search.'; return; }
+  if (!query) { statusEl.textContent = 'Enter an address and/or location above to search.'; return; }
 
   statusEl.textContent = 'Searching...';
   const result = await geocodeQuery(query);
@@ -251,7 +253,6 @@ function openAdminEditor(course) {
   adminEditingLogoDataUrl = course ? (course.logo || null) : null;
   adminCourseLat = course && course.lat != null ? course.lat : null;
   adminCourseLng = course && course.lng != null ? course.lng : null;
-  document.getElementById('admin-location-search').value = '';
   document.getElementById('admin-location-status').textContent = '';
 
   // Reset any leftover reference-image overlay from a previous editing session.
@@ -343,6 +344,17 @@ function openAdminEditor(course) {
           const m = L.marker([h.basket.lat, h.basket.lng], { icon: makeBasketIcon(scale), draggable: true }).addTo(adminMap);
           updateMarkerHoleLabel(m, [h.number], { baseOffset: h.basket.labelOffset });
           adminHoleMarkers[h.number].basketMarker = m;
+        }
+        if (h.secondTee) {
+          const m = L.marker([h.secondTee.lat, h.secondTee.lng], { icon: makeSecondTeeDivIcon(h.secondTee.rotation || 0, scale), draggable: true }).addTo(adminMap);
+          m._rotationDeg = h.secondTee.rotation || 0;
+          updateMarkerHoleLabel(m, [h.number + 'A'], { baseOffset: h.secondTee.labelOffset, isAlt: true });
+          adminHoleMarkers[h.number].secondTeeMarker = m;
+        }
+        if (h.secondBasket) {
+          const m = L.marker([h.secondBasket.lat, h.secondBasket.lng], { icon: makeSecondBasketIcon(scale), draggable: true }).addTo(adminMap);
+          updateMarkerHoleLabel(m, [h.number + 'A'], { baseOffset: h.secondBasket.labelOffset, isAlt: true });
+          adminHoleMarkers[h.number].secondBasketMarker = m;
         }
         if (h.waypoints && h.waypoints.length) {
           adminHoleMarkers[h.number].waypointMarkers = h.waypoints.map(w =>
@@ -487,6 +499,23 @@ function handleAdminMapClick(e) {
       updateMarkerHoleLabel(m, [holeNumber]);
       holeData.basketMarker = m;
     }
+  } else if (kind === 'secondTee') {
+    if (holeData.secondTeeMarker) {
+      holeData.secondTeeMarker.setLatLng(e.latlng);
+    } else {
+      const m = L.marker(e.latlng, { icon: makeSecondTeeDivIcon(0, scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
+      m._rotationDeg = 0;
+      updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
+      holeData.secondTeeMarker = m;
+    }
+  } else if (kind === 'secondBasket') {
+    if (holeData.secondBasketMarker) {
+      holeData.secondBasketMarker.setLatLng(e.latlng);
+    } else {
+      const m = L.marker(e.latlng, { icon: makeSecondBasketIcon(scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
+      updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
+      holeData.secondBasketMarker = m;
+    }
   } else if (kind === 'waypoint') {
     holeData.waypointMarkers = holeData.waypointMarkers || [];
     holeData.waypointMarkers.push(createAdminWaypointMarker(e.latlng, holeNumber));
@@ -511,6 +540,16 @@ function rescaleAdminMarkers() {
       forceReenableDragging(holeData.basketMarker);
       rescaleHoleLabel(holeData.basketMarker, adminMap, !adminNumbersLocked);
     }
+    if (holeData.secondTeeMarker) {
+      holeData.secondTeeMarker.setIcon(makeSecondTeeDivIcon(holeData.secondTeeMarker._rotationDeg || 0, scale));
+      forceReenableDragging(holeData.secondTeeMarker);
+      rescaleHoleLabel(holeData.secondTeeMarker, adminMap, !adminNumbersLocked);
+    }
+    if (holeData.secondBasketMarker) {
+      holeData.secondBasketMarker.setIcon(makeSecondBasketIcon(scale));
+      forceReenableDragging(holeData.secondBasketMarker);
+      rescaleHoleLabel(holeData.secondBasketMarker, adminMap, !adminNumbersLocked);
+    }
   });
 }
 
@@ -520,7 +559,7 @@ function rescaleAdminMarkers() {
 function setAdminNumbersLocked(locked) {
   adminNumbersLocked = locked;
   Object.values(adminHoleMarkers).forEach(holeData => {
-    [holeData.teeMarker, holeData.basketMarker].forEach(marker => {
+    [holeData.teeMarker, holeData.basketMarker, holeData.secondTeeMarker, holeData.secondBasketMarker].forEach(marker => {
       if (!marker || !marker._holeLabelMarker) return;
       rescaleHoleLabel(marker, adminMap, !locked);
     });
@@ -569,6 +608,18 @@ async function saveAdminCourse() {
       hole.basket = { lat: ll.lat, lng: ll.lng };
       const labelOffset = getLabelBaseOffset(holeData.basketMarker);
       if (labelOffset) hole.basket.labelOffset = labelOffset;
+    }
+    if (holeData && holeData.secondTeeMarker) {
+      const ll = holeData.secondTeeMarker.getLatLng();
+      hole.secondTee = { lat: ll.lat, lng: ll.lng, rotation: holeData.secondTeeMarker._rotationDeg || 0 };
+      const labelOffset = getLabelBaseOffset(holeData.secondTeeMarker);
+      if (labelOffset) hole.secondTee.labelOffset = labelOffset;
+    }
+    if (holeData && holeData.secondBasketMarker) {
+      const ll = holeData.secondBasketMarker.getLatLng();
+      hole.secondBasket = { lat: ll.lat, lng: ll.lng };
+      const labelOffset = getLabelBaseOffset(holeData.secondBasketMarker);
+      if (labelOffset) hole.secondBasket.labelOffset = labelOffset;
     }
     if (holeData && holeData.waypointMarkers && holeData.waypointMarkers.length) {
       hole.waypoints = holeData.waypointMarkers.map(m => {

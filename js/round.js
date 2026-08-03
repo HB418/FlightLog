@@ -212,6 +212,19 @@ function renderCourseOverlay(map, holes, registry, lineRegistry) {
       updateMarkerHoleLabel(m, [h.number], { draggable: false, baseOffset: h.basket.labelOffset });
       bounds.push([h.basket.lat, h.basket.lng]);
     }
+    if (h.secondTee) {
+      const m = L.marker([h.secondTee.lat, h.secondTee.lng], { icon: makeSecondTeeDivIcon(h.secondTee.rotation || 0, scale, false) }).addTo(map);
+      m._rotationDeg = h.secondTee.rotation || 0;
+      if (registry) registry.push({ marker: m, kind: 'secondTee', holeNumber: h.number, isCurrent: false });
+      updateMarkerHoleLabel(m, [h.number + 'A'], { draggable: false, baseOffset: h.secondTee.labelOffset, isAlt: true });
+      bounds.push([h.secondTee.lat, h.secondTee.lng]);
+    }
+    if (h.secondBasket) {
+      const m = L.marker([h.secondBasket.lat, h.secondBasket.lng], { icon: makeSecondBasketIcon(scale) }).addTo(map);
+      if (registry) registry.push({ marker: m, kind: 'secondBasket', holeNumber: h.number, isCurrent: false });
+      updateMarkerHoleLabel(m, [h.number + 'A'], { draggable: false, baseOffset: h.secondBasket.labelOffset, isAlt: true });
+      bounds.push([h.secondBasket.lat, h.secondBasket.lng]);
+    }
 
     if (h.tee && h.basket) {
       const pts = [[h.tee.lat, h.tee.lng]];
@@ -236,6 +249,8 @@ function updateCurrentHoleStyling(map, iconRegistry, lineRegistry, currentHoleNu
     entry.isCurrent = isCurrent;
     if (entry.kind === 'tee') {
       entry.marker.setIcon(makeTeeDivIcon(entry.marker._rotationDeg || 0, scale, isCurrent));
+    } else if (entry.kind === 'secondTee') {
+      entry.marker.setIcon(makeSecondTeeDivIcon(entry.marker._rotationDeg || 0, scale, isCurrent));
     } else {
       entry.marker.setIcon(makeBasketIcon(scale, isCurrent));
     }
