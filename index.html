@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=56"/>
+  <link rel="stylesheet" href="css/styles.css?v=57"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -257,6 +257,101 @@
     </div>
   </div>
 
+  <!-- Add Disc: search by make/model -->
+  <div id="add-disc-search-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:400px;width:92%;text-align:left;">
+      <h4 style="text-align:center;">Add Disc</h4>
+      <label for="add-disc-brand-input">Brand (optional)</label>
+      <input type="text" id="add-disc-brand-input" placeholder="e.g. Innova" style="width:100%;margin-bottom:0.75rem;"/>
+      <label for="add-disc-name-input">Model</label>
+      <input type="text" id="add-disc-name-input" placeholder="e.g. Destroyer" style="width:100%;margin-bottom:0.75rem;"/>
+      <div id="add-disc-search-status" class="modal-status-text"></div>
+      <div style="text-align:center;margin-top:0.5rem;">
+        <button id="add-disc-search-btn" class="paper-btn">Search</button>
+        <button id="add-disc-search-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Disc: search results (may be more than one match) -->
+  <div id="add-disc-results-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:94%;text-align:left;">
+      <h4 style="text-align:center;">Select a Disc</h4>
+      <div id="add-disc-results-list" style="max-height:50vh;overflow-y:auto;"></div>
+      <div style="text-align:center;margin-top:0.75rem;">
+        <button id="add-disc-results-back-btn" class="paper-btn">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Disc: confirm adding a found disc -->
+  <div id="add-disc-confirm-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:380px;width:90%;text-align:center;">
+      <h4>Add to Collection?</h4>
+      <img id="add-disc-confirm-img" src="" alt="" class="no-paper-img-border" style="max-width:60%;max-height:180px;object-fit:contain;margin:0.5rem auto;display:block;"/>
+      <div id="add-disc-confirm-details" style="font-size:0.9rem;margin-bottom:0.75rem;"></div>
+      <button id="add-disc-confirm-add-btn" class="paper-btn">Add to Collection</button>
+      <button id="add-disc-confirm-cancel-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Add Disc: not found, offer manual entry -->
+  <div id="add-disc-not-found-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:380px;width:90%;text-align:center;">
+      <h4>Disc Not Found</h4>
+      <p>We couldn't find that disc. Would you like to enter it manually?</p>
+      <button id="add-disc-manual-yes-btn" class="paper-btn">Enter Manually</button>
+      <button id="add-disc-manual-no-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Add Disc: manual entry form -->
+  <div id="add-disc-manual-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
+      <h4 style="text-align:center;">Enter Disc Manually</h4>
+      <label for="manual-disc-name">Name</label>
+      <input type="text" id="manual-disc-name" style="width:100%;margin-bottom:0.5rem;"/>
+      <label for="manual-disc-brand">Brand</label>
+      <input type="text" id="manual-disc-brand" style="width:100%;margin-bottom:0.5rem;"/>
+      <label for="manual-disc-category">Category</label>
+      <input type="text" id="manual-disc-category" placeholder="e.g. Putter, Midrange, Driver" style="width:100%;margin-bottom:0.5rem;"/>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+        <div style="flex:1;">
+          <label for="manual-disc-speed">Speed</label>
+          <input type="number" id="manual-disc-speed" style="width:100%;"/>
+        </div>
+        <div style="flex:1;">
+          <label for="manual-disc-glide">Glide</label>
+          <input type="number" id="manual-disc-glide" style="width:100%;"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+        <div style="flex:1;">
+          <label for="manual-disc-turn">Turn</label>
+          <input type="number" id="manual-disc-turn" style="width:100%;"/>
+        </div>
+        <div style="flex:1;">
+          <label for="manual-disc-fade">Fade</label>
+          <input type="number" id="manual-disc-fade" style="width:100%;"/>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <button id="manual-disc-save-btn" class="paper-btn">Save</button>
+        <button id="manual-disc-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simple lightbox for enlarging a clicked image -->
+  <div id="image-lightbox-modal" class="custom-modal">
+    <div class="custom-modal-content">
+      <img id="image-lightbox-img" src="" alt="" class="no-paper-img-border"/>
+      <div>
+        <button id="image-lightbox-close-btn" class="paper-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Finish Review Modal -->
   <div id="finish-review-modal" class="custom-modal">
     <div class="custom-modal-content" style="max-width:420px;width:92%;text-align:left;">
@@ -364,7 +459,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
-  <script src="js/db.js?v=3"></script>
+  <script src="js/db.js?v=4"></script>
   <script src="js/stock-courses.js?v=9"></script>
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=22"></script>
@@ -372,7 +467,8 @@
   <script src="js/admin-panel.js?v=10"></script>
   <script src="js/round.js?v=6"></script>
   <script src="js/putt-practice.js?v=2"></script>
-  <script src="js/main.js?v=100"></script>
+  <script src="js/discs.js?v=2"></script>
+  <script src="js/main.js?v=101"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 

@@ -3,10 +3,13 @@
    Stores:
      - courses: { id, name, holes: [{ number, length, par }] }
      - rounds:  { id, courseId, courseName, date, players: [{ name, scores: [{hole, strokes}] }] }
+     - discs:   { id, name, brand, category, speed, glide, turn, fade,
+                  stability, pic, manual } — manual:true means it was
+                  hand-entered rather than found via the DiscIt API
 */
 
 const FLIGHTLOG_DB_NAME = 'DiscTallyDB';
-const FLIGHTLOG_DB_VERSION = 2;
+const FLIGHTLOG_DB_VERSION = 3;
 
 function openDiscTallyDB() {
   return new Promise((resolve, reject) => {
@@ -19,6 +22,9 @@ function openDiscTallyDB() {
       if (!db.objectStoreNames.contains('rounds')) {
         const roundsStore = db.createObjectStore('rounds', { keyPath: 'id', autoIncrement: true });
         roundsStore.createIndex('courseId', 'courseId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('discs')) {
+        db.createObjectStore('discs', { keyPath: 'id', autoIncrement: true });
       }
     };
     req.onsuccess = (e) => resolve(e.target.result);
@@ -113,6 +119,33 @@ function clearAllRounds(db) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('rounds', 'readwrite');
     tx.objectStore('rounds').clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addDisc(db, disc) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('discs', 'readwrite');
+    const req = tx.objectStore('discs').add(disc);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllDiscs(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('discs', 'readonly');
+    const req = tx.objectStore('discs').getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function deleteDisc(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('discs', 'readwrite');
+    tx.objectStore('discs').delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });

@@ -1462,3 +1462,33 @@ body.dark-mode .course-grid-tile-empty {
 body.dark-mode a {
   color: var(--mustard);
 }
+
+/* Reusable: strips PaperCSS's default hand-drawn border/shadow effect
+   from an <img> tag, for anywhere a clean image is wanted instead
+   (disc pictures, etc.) without repeating the same overrides inline. */
+.no-paper-img-border {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  filter: none !important;
+  border-radius: 0 !important;
+}
+
+/* Simple lightbox for enlarging a clicked image (disc pictures, etc.) */
+#image-lightbox-modal .custom-modal-content {
+  max-width: 90vw;
+  width: auto;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  text-align: center;
+}
+#image-lightbox-modal img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+}
+#image-lightbox-modal button {
+  margin-top: 0.75rem;
+}

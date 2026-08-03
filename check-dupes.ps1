@@ -1,4 +1,4 @@
-$files = 'stock-courses.js','ratings.js','map-icons.js','course-wizard.js','admin-panel.js','round.js','putt-practice.js','main.js','namePrompt.js'
+$files = 'db.js','stock-courses.js','ratings.js','map-icons.js','course-wizard.js','admin-panel.js','round.js','putt-practice.js','discs.js','main.js','namePrompt.js'
 $all = @()
 foreach ($f in $files) {
   $path = "F:\coding\flightLog-v2\js\$f"

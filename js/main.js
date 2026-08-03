@@ -27,9 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
     showGenericModal('Field Work is coming soon.');
   });
   document.getElementById('putt-practice-btn')?.addEventListener('click', () => openCourseListModal('putt-practice'));
-  document.getElementById('add-disc-btn')?.addEventListener('click', () => {
-    showGenericModal('Add Disc is coming soon.');
-  });
+  document.getElementById('add-disc-btn')?.addEventListener('click', openAddDiscSearchModal);
   document.getElementById('admin-map-entry-btn')?.addEventListener('click', openAdminPanel);
   document.getElementById('admin-panel-close-btn')?.addEventListener('click', closeAdminPanel);
   document.getElementById('admin-new-course-btn')?.addEventListener('click', () => openAdminEditor(null));
