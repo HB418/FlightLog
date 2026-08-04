@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=76"/>
+  <link rel="stylesheet" href="css/styles.css?v=83"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -90,7 +90,7 @@
         <label for="nc-course-address">Address</label>
         <input type="text" id="nc-course-address" placeholder="Street address" style="width:100%;margin-bottom:0.75rem;"/>
 
-        <label for="nc-course-location">Location (e.g. "Newington, NH")</label>
+        <label for="nc-course-location">Location</label>
         <input type="text" id="nc-course-location" placeholder="City, State" style="width:100%;margin-bottom:0.75rem;"/>
 
         <label for="nc-hole-count">Number of Holes</label>
@@ -243,6 +243,10 @@
           <label for="hole-placement-rotation" style="font-size:0.8rem;">Tee facing direction</label>
           <input type="range" id="hole-placement-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
         </div>
+        <div id="hole-placement-second-delete-row" class="map-popup-inline-btn-row hide">
+          <button id="hole-placement-delete-second-tee-btn" type="button" class="paper-btn">Delete 2nd Tee</button>
+          <button id="hole-placement-delete-second-basket-btn" type="button" class="paper-btn hide">Delete 2nd Basket</button>
+        </div>
       </div>
 
       <button id="hole-placement-cancel-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Cancel</button>
@@ -252,9 +256,8 @@
       <button id="hole-placement-reuse-basket-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Use Existing Basket</button>
       <button id="hole-placement-confirm-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Confirm</button>
       <button id="hole-placement-done-waypoints-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">No More Waypoints</button>
+      <button id="hole-placement-second-path-target-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right-upper hide">Path to: 2nd Basket</button>
       <button id="hole-placement-finish-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Finish</button>
-      <button id="hole-placement-second-tee-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-center-left hide">Add 2nd Tee</button>
-      <button id="hole-placement-second-basket-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-center-right hide">Add 2nd Basket</button>
     </div>
   </div>
 
@@ -305,7 +308,25 @@
       <img id="add-disc-confirm-img" src="" alt="" class="no-paper-img-border" style="max-width:60%;max-height:180px;object-fit:contain;margin:0.5rem auto;display:block;"/>
       <div id="add-disc-confirm-details" style="font-size:0.9rem;margin-bottom:0.75rem;"></div>
       <button id="add-disc-confirm-add-btn" class="paper-btn">Add to Collection</button>
+      <button id="add-disc-confirm-color-btn" class="paper-btn">Add Color</button>
       <button id="add-disc-confirm-cancel-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Add Disc: pick up to 10 colors -->
+  <div id="add-disc-color-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:380px;width:90%;text-align:center;">
+      <h4>Disc Colors</h4>
+      <div id="add-disc-color-swatches" style="display:flex;flex-wrap:wrap;gap:0.4rem;justify-content:center;margin-bottom:0.75rem;min-height:2.25rem;"></div>
+      <input type="color" id="add-disc-color-input" value="#ff0000" style="width:60px;height:40px;border:none;padding:0;margin-bottom:0.5rem;"/>
+      <div>
+        <button id="add-disc-color-add-btn" class="paper-btn">Add Color</button>
+      </div>
+      <div id="add-disc-color-status" class="modal-status-text"></div>
+      <div style="margin-top:0.75rem;">
+        <button id="add-disc-color-save-btn" class="paper-btn">Save</button>
+        <button id="add-disc-color-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -440,7 +461,13 @@
 <!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
      and the "Start New Round" button (Select mode). -->
 <div id="course-list-modal" class="custom-modal">
-  <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;">
+  <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;position:relative;">
+    <div class="list-search-bar">
+      <input id="course-list-search-input" type="text" class="list-search-input hide" placeholder="Search courses..."/>
+      <button id="course-list-search-toggle-btn" type="button" class="list-search-toggle-btn" aria-label="Search courses">
+        <span class="material-icons">search</span>
+      </button>
+    </div>
     <h4 style="text-align:center;">Courses</h4>
     <div id="course-list-items" class="course-grid"></div>
     <button id="course-list-cancel-btn" class="paper-btn">Close</button>
@@ -450,7 +477,13 @@
 
 <!-- Discs List Modal -->
 <div id="discs-list-modal" class="custom-modal">
-  <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;">
+  <div class="custom-modal-content" style="max-width:900px;width:96vw;text-align:left;position:relative;">
+    <div class="list-search-bar">
+      <input id="discs-list-search-input" type="text" class="list-search-input hide" placeholder="Search discs..."/>
+      <button id="discs-list-search-toggle-btn" type="button" class="list-search-toggle-btn" aria-label="Search discs">
+        <span class="material-icons">search</span>
+      </button>
+    </div>
     <h4 style="text-align:center;">My Discs</h4>
     <div id="discs-list-items" class="course-grid"></div>
     <button id="discs-list-cancel-btn" class="paper-btn">Close</button>
@@ -505,13 +538,13 @@
   <script src="js/stock-courses.js?v=9"></script>
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=23"></script>
-  <script src="js/course-wizard.js?v=5"></script>
-  <script src="js/admin-panel.js?v=12"></script>
-  <script src="js/round.js?v=7"></script>
+  <script src="js/course-wizard.js?v=12"></script>
+  <script src="js/admin-panel.js?v=16"></script>
+  <script src="js/round.js?v=9"></script>
   <script src="js/putt-practice.js?v=2"></script>
-  <script src="js/discs.js?v=8"></script>
+  <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=107"></script>
+  <script src="js/main.js?v=114"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 
@@ -736,12 +769,20 @@
           <div id="admin-map-toolbar">
             <span id="admin-selected-hole-label">No hole selected</span>
             <div class="admin-map-toolbar-buttons">
-              <button type="button" id="admin-set-tee-btn" class="paper-btn">Set Tee</button>
-              <button type="button" id="admin-set-basket-btn" class="paper-btn">Set Basket</button>
-              <button type="button" id="admin-set-second-tee-btn" class="paper-btn">Set 2nd Tee</button>
-              <button type="button" id="admin-set-second-basket-btn" class="paper-btn">Set 2nd Basket</button>
-              <button type="button" id="admin-add-waypoint-btn" class="paper-btn">Add Waypoint</button>
-              <button type="button" id="admin-clear-waypoints-btn" class="paper-btn">Clear Waypoints</button>
+              <select id="admin-action-select" style="min-width:200px;">
+                <option value="" selected disabled>-- Hole Actions --</option>
+                <option value="setTee">Set Tee</option>
+                <option value="setBasket">Set Basket</option>
+                <option value="setSecondTee">Set 2nd Tee</option>
+                <option value="setSecondBasket">Set 2nd Basket</option>
+                <option value="addWaypoint">Add Waypoint</option>
+                <option value="clearWaypoints">Clear Waypoints</option>
+                <option value="addSecondWaypoint">Add 2nd Tee Waypoint</option>
+                <option value="clearSecondWaypoints">Clear 2nd Tee Waypoints</option>
+                <option value="togglePathTarget" id="admin-action-toggle-path-option">Path to: 2nd Basket</option>
+                <option value="deleteSecondTee">Delete 2nd Tee</option>
+                <option value="deleteSecondBasket">Delete 2nd Basket</option>
+              </select>
               <div class="admin-toolbar-sliders-col">
                 <div class="admin-toolbar-sliders-row">
                   <label for="admin-rotation-slider" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>

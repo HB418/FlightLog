@@ -8,10 +8,22 @@
 
 const DISCIT_API_BASE = 'https://discit-api.fly.dev/disc';
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 let discSearchResults = [];   // last search's results, so picking one from the list works
 let discSelectionMode = false; // true while picking discs to remove (Remove button was pressed)
 let selectedDiscIds = new Set();
 let selectedFoundDisc = null; // the disc currently shown in the confirm-add modal
+let pendingDiscColors = [];   // colors picked for the disc currently being added
+let pendingDiscColorsSnapshot = []; // colors before the color modal was opened, for Cancel
+let discListSearchQuery = ''; // live text typed into the disc list's search bar
 
 function openAddDiscSearchModal() {
   document.getElementById('add-disc-brand-input').value = '';
@@ -81,6 +93,7 @@ function renderDiscResultsList(results) {
 
 function showAddDiscConfirm(disc) {
   selectedFoundDisc = disc;
+  pendingDiscColors = [];
   const img = document.getElementById('add-disc-confirm-img');
   if (disc.pic) {
     img.src = disc.pic;
@@ -119,10 +132,47 @@ async function addFoundDiscToCollection() {
     fade: d.fade,
     stability: d.stability || '',
     pic: d.pic || '',
+    colors: pendingDiscColors.slice(),
     manual: false
   });
   selectedFoundDisc = null;
+  pendingDiscColors = [];
   document.getElementById('add-disc-confirm-modal').classList.remove('active');
+}
+
+function openDiscColorModal() {
+  pendingDiscColorsSnapshot = pendingDiscColors.slice();
+  document.getElementById('add-disc-color-status').textContent = '';
+  document.getElementById('add-disc-color-input').value = '#ff0000';
+  renderDiscColorSwatches();
+  document.getElementById('add-disc-color-modal').classList.add('active');
+}
+
+function renderDiscColorSwatches() {
+  const wrap = document.getElementById('add-disc-color-swatches');
+  wrap.innerHTML = '';
+  pendingDiscColors.forEach((c, idx) => {
+    const swatch = document.createElement('div');
+    swatch.title = 'Tap to remove';
+    swatch.style.cssText = 'width:32px;height:32px;border-radius:50%;background:' + c + ';border:2px solid #333;cursor:pointer;';
+    swatch.addEventListener('click', () => {
+      pendingDiscColors.splice(idx, 1);
+      renderDiscColorSwatches();
+    });
+    wrap.appendChild(swatch);
+  });
+}
+
+function addDiscColor() {
+  const statusEl = document.getElementById('add-disc-color-status');
+  if (pendingDiscColors.length >= 10) {
+    statusEl.textContent = 'You can add up to 10 colors.';
+    return;
+  }
+  const val = document.getElementById('add-disc-color-input').value;
+  pendingDiscColors.push(val);
+  statusEl.textContent = '';
+  renderDiscColorSwatches();
 }
 
 function openManualDiscForm() {
@@ -169,7 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('add-disc-confirm-add-btn')?.addEventListener('click', addFoundDiscToCollection);
   document.getElementById('add-disc-confirm-cancel-btn')?.addEventListener('click', () => {
     selectedFoundDisc = null;
+    pendingDiscColors = [];
     document.getElementById('add-disc-confirm-modal').classList.remove('active');
+  });
+  document.getElementById('add-disc-confirm-color-btn')?.addEventListener('click', openDiscColorModal);
+  document.getElementById('add-disc-color-add-btn')?.addEventListener('click', addDiscColor);
+  document.getElementById('add-disc-color-save-btn')?.addEventListener('click', () => {
+    document.getElementById('add-disc-color-modal').classList.remove('active');
+  });
+  document.getElementById('add-disc-color-cancel-btn')?.addEventListener('click', () => {
+    pendingDiscColors = pendingDiscColorsSnapshot.slice();
+    document.getElementById('add-disc-color-modal').classList.remove('active');
   });
   document.getElementById('add-disc-manual-yes-btn')?.addEventListener('click', openManualDiscForm);
   document.getElementById('add-disc-manual-no-btn')?.addEventListener('click', () => {
@@ -186,11 +246,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('discs-list-modal').classList.remove('active');
   });
   document.getElementById('discs-list-remove-btn')?.addEventListener('click', handleDiscRemoveOrDeleteClick);
+
+  // Magnifying-glass search toggle: click reveals+focuses the input;
+  // click again collapses it and clears the search back to the full list.
+  document.getElementById('discs-list-search-toggle-btn')?.addEventListener('click', () => {
+    const input = document.getElementById('discs-list-search-input');
+    const content = document.querySelector('#discs-list-modal .custom-modal-content');
+    const nowHidden = input.classList.toggle('hide');
+    if (nowHidden) {
+      input.value = '';
+      discListSearchQuery = '';
+      loadDiscsList();
+      content?.classList.remove('search-active');
+    } else {
+      input.focus();
+      content?.classList.add('search-active');
+    }
+  });
+  document.getElementById('discs-list-search-input')?.addEventListener('input', (e) => {
+    discListSearchQuery = e.target.value;
+    loadDiscsList();
+  });
 });
 
 async function openDiscsListModal() {
   discSelectionMode = false;
   selectedDiscIds.clear();
+  discListSearchQuery = '';
+  const searchInput = document.getElementById('discs-list-search-input');
+  if (searchInput) { searchInput.value = ''; searchInput.classList.add('hide'); }
+  document.querySelector('#discs-list-modal .custom-modal-content')?.classList.remove('search-active');
   const removeBtn = document.getElementById('discs-list-remove-btn');
   if (removeBtn) removeBtn.textContent = 'Remove';
   await loadDiscsList();
@@ -205,7 +290,21 @@ async function loadDiscsList() {
 
   listEl.innerHTML = '';
 
-  discs.forEach((d) => {
+  const query = discListSearchQuery.trim();
+  let displayDiscs = discs;
+  if (query) {
+    displayDiscs = discs
+      .map(d => ({ d, score: searchRelevanceScore([d.name, d.brand, d.category], query) }))
+      .filter(x => x.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.d);
+    if (displayDiscs.length === 0) {
+      listEl.innerHTML = '<p style="padding:0.5rem;grid-column:1/-1;">No discs match your search.</p>';
+      return;
+    }
+  }
+
+  displayDiscs.forEach((d) => {
     const tile = document.createElement('div');
     tile.className = 'course-grid-tile';
 
@@ -242,12 +341,16 @@ async function loadDiscsList() {
 
     const nameEl = document.createElement('span');
     nameEl.className = 'course-grid-tile-name';
-    nameEl.textContent = d.name || 'Unnamed Disc';
+    const brandText = d.brand || '';
+    const modelText = d.name || 'Unnamed Disc';
+    nameEl.innerHTML = brandText
+      ? escapeHtml(brandText) + ' - <em>' + escapeHtml(modelText) + '</em>'
+      : '<em>' + escapeHtml(modelText) + '</em>';
     infoRow.appendChild(nameEl);
 
     const brandEl = document.createElement('span');
     brandEl.className = 'course-grid-tile-location';
-    brandEl.textContent = (d.brand || '') + (d.category ? ' \u00b7 ' + d.category : '');
+    brandEl.textContent = d.category || '';
     infoRow.appendChild(brandEl);
 
     const hasFlightNums = [d.speed, d.glide, d.turn, d.fade].some(v => v != null && v !== '');
@@ -277,6 +380,17 @@ async function loadDiscsList() {
 
     content.appendChild(infoRow);
 
+    if (Array.isArray(d.colors) && d.colors.length > 0) {
+      const colorBar = document.createElement('div');
+      colorBar.style.cssText = 'display:flex;width:100%;flex:0 0 auto;height:6px;margin-top:0.3rem;border-radius:3px;overflow:hidden;';
+      d.colors.forEach((c) => {
+        const seg = document.createElement('div');
+        seg.style.cssText = 'flex:1;background:' + c + ';';
+        colorBar.appendChild(seg);
+      });
+      infoRow.appendChild(colorBar);
+    }
+
     tile.addEventListener('click', () => {
       if (discSelectionMode) {
         if (selectedDiscIds.has(d.id)) selectedDiscIds.delete(d.id);
@@ -294,13 +408,17 @@ async function loadDiscsList() {
   // Always show a full list of 10 slots — fill any remaining empty
   // slots with "Disc coming soon" placeholders, same as the Courses
   // list. If there are more than 10 discs, no placeholders are added
-  // and the list just grows past 10 as needed.
-  const minSlots = 10;
-  for (let i = discs.length; i < minSlots; i++) {
-    const empty = document.createElement('div');
-    empty.className = 'course-grid-tile-empty';
-    empty.textContent = 'Disc coming soon';
-    listEl.appendChild(empty);
+  // and the list just grows past 10 as needed. Skipped while a search
+  // is active, since padding a filtered/reordered list to 10 doesn't
+  // make sense.
+  if (!query) {
+    const minSlots = 10;
+    for (let i = discs.length; i < minSlots; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'course-grid-tile-empty';
+      empty.textContent = 'Disc coming soon';
+      listEl.appendChild(empty);
+    }
   }
 }
 

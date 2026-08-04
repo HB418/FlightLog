@@ -1017,6 +1017,18 @@ body.dark-mode .hole-record-box {
   height: 100%;
   border-radius: 0.35rem;
 }
+/* Leaflet's internal layers (marker pane z-index:600, tooltip pane:650,
+   popup pane:700) have no containing stacking context of their own by
+   default, so once a marker/tooltip is placed they can paint OVER our
+   overlay bar and buttons (z-index:500) sitting on top of the map,
+   even though those buttons are later in the DOM. Giving the map
+   container its own z-index turns it into a self-contained stacking
+   context — everything Leaflet draws inside it is now trapped below
+   that single z-index:1, so it can never again out-rank the overlay
+   bar/buttons floating on top, regardless of what Leaflet does inside. */
+.map-popup-fill.leaflet-container {
+  z-index: 1;
+}
 .map-popup-btn {
   position: absolute;
   z-index: 500;
@@ -1041,19 +1053,6 @@ body.dark-mode .hole-record-box {
   bottom: 3.4rem;
   right: 0.6rem;
 }
-/* Optional-extras row, bottom-center — for things like Add 2nd
-   Tee/Basket that need to coexist alongside whatever's in the
-   corner slots (e.g. "No More Waypoints"), not replace it. */
-.map-popup-btn-center-left {
-  bottom: 0.6rem;
-  left: 50%;
-  transform: translateX(calc(-100% - 0.3rem));
-}
-.map-popup-btn-center-right {
-  bottom: 0.6rem;
-  left: 50%;
-  transform: translateX(0.3rem);
-}
 /* A translucent bar for anything that isn't a simple button (an
    instruction line, a slider) that still needs to sit over the map
    without a plain white box looking out of place against it. */
@@ -1068,6 +1067,63 @@ body.dark-mode .hole-record-box {
 }
 .map-popup-overlay-bar.top {
   top: 0;
+}
+/* Small button row inside the top overlay bar — e.g. the 2nd-tee/2nd-basket
+   delete controls — flexed and centered under the instructions text. */
+.map-popup-inline-btn-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.map-popup-inline-btn-row .paper-btn {
+  min-height: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+/* Magnifying-glass search toggle in the corner of the Courses/My Discs
+   list modals. Collapsed: just the icon. Clicking it reveals the input
+   to its left (and focuses it); clicking again collapses and clears
+   the search, restoring the full unfiltered list. */
+.list-search-bar {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 5;
+}
+.list-search-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem;
+  line-height: 0;
+  color: var(--dark-teal);
+}
+body.dark-mode .list-search-toggle-btn {
+  color: var(--mustard);
+}
+.list-search-input {
+  width: 11rem;
+  max-width: 45vw;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+/* On phone widths the "Courses"/"My Discs" title sits right under the
+   search bar and the two crowd/overlap once the input pops out — hide
+   the title's TEXT while searching there (visibility, not display, so
+   its space stays reserved and the list underneath doesn't jump up
+   into the search bar), restoring it once the search bar collapses.
+   Desktop has plenty of room, so it's left alone above this breakpoint. */
+@media (max-width: 767px) {
+  .custom-modal-content.search-active > h4 {
+    visibility: hidden;
+  }
 }
 .custom-modal-content h4 {
   color: var(--dark-teal);

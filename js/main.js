@@ -9,6 +9,7 @@ let selectedCourseListId = null; // currently-selected course row in the course-
 let courseListMode = 'select';   // 'select' | 'delete' | 'putt-practice' — what the course-list-modal does when you pick a course
 let courseSelectionMode = false; // true while picking courses to remove (Remove button was pressed)
 let selectedCourseIds = new Set();
+let courseListSearchQuery = ''; // live text typed into the course list's search bar
 
 document.addEventListener('DOMContentLoaded', function () {
   seedStockCourses().then(loadCourseOptions);
@@ -163,47 +164,71 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  document.getElementById('admin-set-tee-btn')?.addEventListener('click', () => {
-    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
-    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'tee' };
-    showGenericModal('Click the map to place/move the tee for Hole ' + adminSelectedHole + '.');
-  });
-  document.getElementById('admin-set-basket-btn')?.addEventListener('click', () => {
-    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
-    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'basket' };
-    showGenericModal('Click the map to place/move the basket for Hole ' + adminSelectedHole + '.');
-  });
-  document.getElementById('admin-set-second-tee-btn')?.addEventListener('click', () => {
+  document.getElementById('admin-action-select')?.addEventListener('change', (e) => {
+    const action = e.target.value;
+    e.target.value = ''; // reset to the placeholder so the same or another action can be picked again
+
     if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
     const holeData = adminHoleMarkers[adminSelectedHole];
-    if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
-      showGenericModal('Set the main tee and basket for this hole first.');
-      return;
-    }
-    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondTee' };
-    showGenericModal('Click the map to place/move the 2nd tee for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
-  });
-  document.getElementById('admin-set-second-basket-btn')?.addEventListener('click', () => {
-    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
-    const holeData = adminHoleMarkers[adminSelectedHole];
-    if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
-      showGenericModal('Set the main tee and basket for this hole first.');
-      return;
-    }
-    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondBasket' };
-    showGenericModal('Click the map to place/move the 2nd basket for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
-  });
-  document.getElementById('admin-add-waypoint-btn')?.addEventListener('click', () => {
-    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
-    adminArmedAction = { holeNumber: adminSelectedHole, kind: 'waypoint' };
-    showGenericModal('Click the map to add a waypoint for Hole ' + adminSelectedHole + '. Click an existing waypoint dot to remove it.');
-  });
-  document.getElementById('admin-clear-waypoints-btn')?.addEventListener('click', () => {
-    if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
-    const holeData = adminHoleMarkers[adminSelectedHole];
-    if (holeData && holeData.waypointMarkers) {
-      holeData.waypointMarkers.forEach(m => adminMap.removeLayer(m));
-      holeData.waypointMarkers = [];
+
+    if (action === 'setTee') {
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'tee' };
+      showGenericModal('Click the map to place/move the tee for Hole ' + adminSelectedHole + '.');
+
+    } else if (action === 'setBasket') {
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'basket' };
+      showGenericModal('Click the map to place/move the basket for Hole ' + adminSelectedHole + '.');
+
+    } else if (action === 'setSecondTee') {
+      if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
+        showGenericModal('Set the main tee and basket for this hole first.');
+        return;
+      }
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondTee' };
+      showGenericModal('Click the map to place/move the 2nd tee for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
+
+    } else if (action === 'setSecondBasket') {
+      if (!holeData || !holeData.teeMarker || !holeData.basketMarker) {
+        showGenericModal('Set the main tee and basket for this hole first.');
+        return;
+      }
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondBasket' };
+      showGenericModal('Click the map to place/move the 2nd basket for Hole ' + adminSelectedHole + '. This is optional, for courses with an alternate layout.');
+
+    } else if (action === 'addWaypoint') {
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'waypoint' };
+      showGenericModal('Click the map to add a waypoint for Hole ' + adminSelectedHole + '. Click an existing waypoint dot to remove it.');
+
+    } else if (action === 'clearWaypoints') {
+      if (holeData && holeData.waypointMarkers) {
+        holeData.waypointMarkers.forEach(m => adminMap.removeLayer(m));
+        holeData.waypointMarkers = [];
+      }
+      updateAdminLivePath(adminSelectedHole);
+
+    } else if (action === 'addSecondWaypoint') {
+      if (!holeData || !holeData.secondTeeMarker) {
+        showGenericModal('Set the 2nd tee for this hole first.');
+        return;
+      }
+      adminArmedAction = { holeNumber: adminSelectedHole, kind: 'secondWaypoint' };
+      showGenericModal('Click the map to add a waypoint for the 2nd tee\'s path on Hole ' + adminSelectedHole + '. Click an existing waypoint dot to remove it.');
+
+    } else if (action === 'clearSecondWaypoints') {
+      if (holeData && holeData.secondWaypointMarkers) {
+        holeData.secondWaypointMarkers.forEach(m => adminMap.removeLayer(m));
+        holeData.secondWaypointMarkers = [];
+      }
+      updateAdminLivePath(adminSelectedHole);
+
+    } else if (action === 'togglePathTarget') {
+      toggleAdminSecondPathTarget();
+
+    } else if (action === 'deleteSecondTee') {
+      deleteAdminSecondTee();
+
+    } else if (action === 'deleteSecondBasket') {
+      deleteAdminSecondBasket();
     }
   });
   HAZARD_TYPES.forEach(type => {
@@ -246,6 +271,27 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('course-list-modal').classList.remove('active');
   });
   document.getElementById('course-list-remove-btn')?.addEventListener('click', handleCourseRemoveOrDeleteClick);
+
+  // Magnifying-glass search toggle: click reveals+focuses the input;
+  // click again collapses it and clears the search back to the full list.
+  document.getElementById('course-list-search-toggle-btn')?.addEventListener('click', () => {
+    const input = document.getElementById('course-list-search-input');
+    const content = document.querySelector('#course-list-modal .custom-modal-content');
+    const nowHidden = input.classList.toggle('hide');
+    if (nowHidden) {
+      input.value = '';
+      courseListSearchQuery = '';
+      loadCourseOptions();
+      content?.classList.remove('search-active');
+    } else {
+      input.focus();
+      content?.classList.add('search-active');
+    }
+  });
+  document.getElementById('course-list-search-input')?.addEventListener('input', (e) => {
+    courseListSearchQuery = e.target.value;
+    loadCourseOptions();
+  });
 
   document.getElementById('course-list-select-btn')?.addEventListener('click', async () => {
     const items = document.querySelectorAll('#course-list-items .course-list-item');
@@ -321,14 +367,6 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('hole-placement-confirm-btn')?.addEventListener('click', handleHolePlacementConfirm);
   document.getElementById('hole-placement-remove-point-btn')?.addEventListener('click', handleRemoveCurrentWaypoint);
   document.getElementById('hole-placement-done-waypoints-btn')?.addEventListener('click', handleDoneWithWaypoints);
-  document.getElementById('hole-placement-second-tee-btn')?.addEventListener('click', () => {
-    holePlacementSubStep = 'second-tee-tap';
-    updateHolePlacementUI();
-  });
-  document.getElementById('hole-placement-second-basket-btn')?.addEventListener('click', () => {
-    holePlacementSubStep = 'second-basket-tap';
-    updateHolePlacementUI();
-  });
   document.getElementById('hole-placement-previous-hole-btn')?.addEventListener('click', goToPreviousHole);
   document.getElementById('hole-placement-reuse-basket-btn')?.addEventListener('click', openReuseBasketModal);
   document.getElementById('hole-placement-finish-btn')?.addEventListener('click', () => {
@@ -336,6 +374,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('hole-placement-cancel-btn')?.addEventListener('click', cancelHolePlacementWizard);
   document.getElementById('hole-placement-rotation')?.addEventListener('input', handleTeeRotationInput);
+  document.getElementById('hole-placement-second-path-target-btn')?.addEventListener('click', toggleSecondPathTarget);
+  document.getElementById('hole-placement-delete-second-tee-btn')?.addEventListener('click', deleteSecondTee);
+  document.getElementById('hole-placement-delete-second-basket-btn')?.addEventListener('click', deleteSecondBasket);
 
   document.getElementById('reuse-basket-use-btn')?.addEventListener('click', useReuseBasketSelection);
   document.getElementById('reuse-basket-cancel-btn')?.addEventListener('click', () => {
@@ -527,6 +568,31 @@ function showGenericModal(message) {
 
 /* ---------- Course list ---------- */
 
+// Simple relevance scorer for live list search: fields listed first
+// (e.g. a course's name) outweigh a match found only in a lower-priority
+// field (e.g. its address), and within a field an exact match beats
+// "starts with" beats "contains" (earlier position wins ties). Returns
+// -1 when nothing matched, so callers can filter those out.
+function searchRelevanceScore(fieldsInPriorityOrder, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  let best = -1;
+  fieldsInPriorityOrder.forEach((field, i) => {
+    const text = (field || '').toLowerCase();
+    if (!text) return;
+    const weight = (fieldsInPriorityOrder.length - i) * 1000;
+    let score = -1;
+    if (text === q) score = weight + 300;
+    else if (text.startsWith(q)) score = weight + 200;
+    else {
+      const idx = text.indexOf(q);
+      if (idx >= 0) score = weight + 100 - idx;
+    }
+    if (score > best) best = score;
+  });
+  return best;
+}
+
 async function loadCourseOptions() {
   const db = await openDiscTallyDB();
   const courses = await getAllCourses(db);
@@ -535,12 +601,23 @@ async function loadCourseOptions() {
 
   listEl.innerHTML = '';
 
-  if (courses.length === 0) {
-    listEl.innerHTML = '<p style="padding:0.5rem;grid-column:1/-1;">No courses saved yet.</p>';
+  const query = courseListSearchQuery.trim();
+  let displayCourses = courses;
+  if (query) {
+    displayCourses = courses
+      .map(c => ({ c, score: searchRelevanceScore([c.name, c.address, c.location], query) }))
+      .filter(x => x.score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.c);
+  }
+
+  if (displayCourses.length === 0) {
+    listEl.innerHTML = '<p style="padding:0.5rem;grid-column:1/-1;">' +
+      (query ? 'No courses match your search.' : 'No courses saved yet.') + '</p>';
     return;
   }
 
-  courses.forEach((c, index) => {
+  displayCourses.forEach((c, index) => {
     const tile = document.createElement('div');
     tile.className = 'course-grid-tile';
 
@@ -617,13 +694,16 @@ async function loadCourseOptions() {
   // Always show a full list of 10 slots — fill any remaining empty
   // slots with "Course coming soon" placeholders. If there are more
   // than 10 real courses, no placeholders are added and the list just
-  // grows past 10 as needed.
-  const minSlots = 10;
-  for (let i = courses.length; i < minSlots; i++) {
-    const empty = document.createElement('div');
-    empty.className = 'course-grid-tile-empty';
-    empty.textContent = 'Course coming soon';
-    listEl.appendChild(empty);
+  // grows past 10 as needed. Skipped entirely while a search is active,
+  // since padding a filtered/reordered list out to 10 doesn't make sense.
+  if (!query) {
+    const minSlots = 10;
+    for (let i = courses.length; i < minSlots; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'course-grid-tile-empty';
+      empty.textContent = 'Course coming soon';
+      listEl.appendChild(empty);
+    }
   }
 }
 
@@ -642,6 +722,10 @@ async function openCourseListModal(mode) {
   courseListMode = mode;
   courseSelectionMode = false;
   selectedCourseIds.clear();
+  courseListSearchQuery = '';
+  const searchInput = document.getElementById('course-list-search-input');
+  if (searchInput) { searchInput.value = ''; searchInput.classList.add('hide'); }
+  document.querySelector('#course-list-modal .custom-modal-content')?.classList.remove('search-active');
   await loadCourseOptions();
   // "Cancel" reads more naturally when the person is mid-way through
   // starting a round (they haven't committed to anything yet); "Close"

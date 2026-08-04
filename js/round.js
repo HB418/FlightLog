@@ -234,6 +234,23 @@ function renderCourseOverlay(map, holes, registry, lineRegistry) {
       const pl = L.polyline(curvedPts, { color: '#FFD400', weight: 2, opacity: 0.85 }).addTo(map);
       if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl });
     }
+
+    // 2nd tee's path: same curve treatment, running to whichever basket
+    // was chosen for it (h.secondPathTarget: 'primary' uses the main
+    // basket, anything else — the default — uses the 2nd basket if one
+    // exists, else falls back to the main basket) — dashed so it reads
+    // as the alternate layout rather than a second primary line.
+    if (h.secondTee) {
+      const endBasket = (h.secondPathTarget === 'primary') ? h.basket : (h.secondBasket || h.basket);
+      if (endBasket) {
+        const pts2 = [[h.secondTee.lat, h.secondTee.lng]];
+        (h.secondWaypoints || []).forEach(w => pts2.push([w.lat, w.lng]));
+        pts2.push([endBasket.lat, endBasket.lng]);
+        const curvedPts2 = catmullRomSplinePoints(pts2);
+        const pl2 = L.polyline(curvedPts2, { color: '#FFD400', weight: 2, opacity: 0.85, dashArray: '4,6' }).addTo(map);
+        if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl2 });
+      }
+    }
   });
   return bounds;
 }

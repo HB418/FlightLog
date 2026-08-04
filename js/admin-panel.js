@@ -337,30 +337,41 @@ function openAdminEditor(course) {
         if (h.tee) {
           const m = L.marker([h.tee.lat, h.tee.lng], { icon: makeTeeDivIcon(h.tee.rotation || 0, scale), draggable: true }).addTo(adminMap);
           m._rotationDeg = h.tee.rotation || 0;
+          m.on('drag', () => updateAdminLivePath(h.number));
           updateMarkerHoleLabel(m, [h.number], { baseOffset: h.tee.labelOffset });
           adminHoleMarkers[h.number].teeMarker = m;
         }
         if (h.basket) {
           const m = L.marker([h.basket.lat, h.basket.lng], { icon: makeBasketIcon(scale), draggable: true }).addTo(adminMap);
+          m.on('drag', () => updateAdminLivePath(h.number));
           updateMarkerHoleLabel(m, [h.number], { baseOffset: h.basket.labelOffset });
           adminHoleMarkers[h.number].basketMarker = m;
         }
         if (h.secondTee) {
           const m = L.marker([h.secondTee.lat, h.secondTee.lng], { icon: makeSecondTeeDivIcon(h.secondTee.rotation || 0, scale), draggable: true }).addTo(adminMap);
           m._rotationDeg = h.secondTee.rotation || 0;
+          m.on('drag', () => updateAdminLivePath(h.number));
           updateMarkerHoleLabel(m, [h.number + 'A'], { baseOffset: h.secondTee.labelOffset, isAlt: true });
           adminHoleMarkers[h.number].secondTeeMarker = m;
         }
         if (h.secondBasket) {
           const m = L.marker([h.secondBasket.lat, h.secondBasket.lng], { icon: makeSecondBasketIcon(scale), draggable: true }).addTo(adminMap);
+          m.on('drag', () => updateAdminLivePath(h.number));
           updateMarkerHoleLabel(m, [h.number + 'A'], { baseOffset: h.secondBasket.labelOffset, isAlt: true });
           adminHoleMarkers[h.number].secondBasketMarker = m;
         }
         if (h.waypoints && h.waypoints.length) {
           adminHoleMarkers[h.number].waypointMarkers = h.waypoints.map(w =>
-            createAdminWaypointMarker([w.lat, w.lng], h.number)
+            createAdminWaypointMarker([w.lat, w.lng], h.number, false)
           );
         }
+        if (h.secondWaypoints && h.secondWaypoints.length) {
+          adminHoleMarkers[h.number].secondWaypointMarkers = h.secondWaypoints.map(w =>
+            createAdminWaypointMarker([w.lat, w.lng], h.number, true)
+          );
+        }
+        adminHoleMarkers[h.number].secondPathTarget = h.secondPathTarget === 'primary' ? 'primary' : 'second';
+        updateAdminLivePath(h.number);
       });
     }
   }, 50);
@@ -378,6 +389,7 @@ function selectAdminHole(holeNumber) {
     HAZARD_TYPES.forEach(type => {
       document.getElementById('admin-hazard-' + type).checked = false;
     });
+    updateAdminSecondPathTargetButton();
     return;
   }
   label.textContent = 'Hole ' + holeNumber + ' selected';
@@ -386,6 +398,72 @@ function selectAdminHole(holeNumber) {
   const hazards = adminHoleHazards[holeNumber] || {};
   HAZARD_TYPES.forEach(type => {
     document.getElementById('admin-hazard-' + type).checked = !!hazards[type];
+  });
+  updateAdminSecondPathTargetButton();
+}
+
+// The "Path to: ..." option only makes sense once the selected hole has
+// both a main basket and a 2nd basket — otherwise disable it rather
+// than removing it outright, and keep its label in sync with whichever
+// hole is currently selected.
+function updateAdminSecondPathTargetButton() {
+  const opt = document.getElementById('admin-action-toggle-path-option');
+  if (!opt) return;
+  const holeData = adminSelectedHole != null ? adminHoleMarkers[adminSelectedHole] : null;
+  const eligible = !!(holeData && holeData.basketMarker && holeData.secondBasketMarker);
+  opt.disabled = !eligible;
+  const target = (holeData && holeData.secondPathTarget === 'primary') ? 'primary' : 'second';
+  opt.textContent = 'Path to: ' + (target === 'primary' ? 'Main Basket' : '2nd Basket');
+}
+
+function toggleAdminSecondPathTarget() {
+  if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
+  const holeData = adminHoleMarkers[adminSelectedHole];
+  if (!holeData || !holeData.basketMarker || !holeData.secondBasketMarker) {
+    showGenericModal('This hole needs both a main basket and a 2nd basket first.');
+    return;
+  }
+  holeData.secondPathTarget = (holeData.secondPathTarget === 'primary') ? 'second' : 'primary';
+  updateAdminLivePath(adminSelectedHole);
+  updateAdminSecondPathTargetButton();
+}
+
+// Removing the 2nd tee cascades to its 2nd basket and waypoints, since
+// those only exist to support the 2nd tee's own path.
+function deleteAdminSecondTee() {
+  if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
+  const holeData = adminHoleMarkers[adminSelectedHole];
+  if (!holeData || !holeData.secondTeeMarker) return;
+  showConfirmModal('Delete the 2nd tee for Hole ' + adminSelectedHole + '? This also removes its 2nd basket and waypoints, if any.', () => {
+    removeMarkerAndLabel(adminMap, holeData.secondTeeMarker);
+    holeData.secondTeeMarker = null;
+    if (holeData.secondBasketMarker) {
+      removeMarkerAndLabel(adminMap, holeData.secondBasketMarker);
+      holeData.secondBasketMarker = null;
+    }
+    if (holeData.secondWaypointMarkers) {
+      holeData.secondWaypointMarkers.forEach(m => adminMap.removeLayer(m));
+      holeData.secondWaypointMarkers = [];
+    }
+    holeData.secondPathTarget = 'second';
+    updateAdminLivePath(adminSelectedHole);
+    updateAdminSecondPathTargetButton();
+  });
+}
+
+// Removing just the 2nd basket keeps the 2nd tee and its waypoints —
+// the live path falls back to the main basket (same fallback the final
+// saved-course rendering already uses when no 2nd basket exists).
+function deleteAdminSecondBasket() {
+  if (adminSelectedHole == null) { showGenericModal('Check a hole first.'); return; }
+  const holeData = adminHoleMarkers[adminSelectedHole];
+  if (!holeData || !holeData.secondBasketMarker) return;
+  showConfirmModal('Delete the 2nd basket for Hole ' + adminSelectedHole + '?', () => {
+    removeMarkerAndLabel(adminMap, holeData.secondBasketMarker);
+    holeData.secondBasketMarker = null;
+    holeData.secondPathTarget = 'second';
+    updateAdminLivePath(adminSelectedHole);
+    updateAdminSecondPathTargetButton();
   });
 }
 
@@ -459,7 +537,7 @@ function generateAdminHoleFields(course) {
   }
 }
 
-function createAdminWaypointMarker(latlng, holeNumber) {
+function createAdminWaypointMarker(latlng, holeNumber, isSecond) {
   const wpIcon = L.divIcon({
     html: '<div style="width:12px;height:12px;border-radius:50%;background:var(--mustard);border:2px solid var(--dark-teal);"></div>',
     className: 'placement-div-icon',
@@ -467,13 +545,50 @@ function createAdminWaypointMarker(latlng, holeNumber) {
     iconAnchor: [6, 6]
   });
   const m = L.marker(latlng, { icon: wpIcon, draggable: true }).addTo(adminMap);
+  m.on('drag', () => updateAdminLivePath(holeNumber));
   m.on('click', () => {
     const holeData = adminHoleMarkers[holeNumber];
-    if (!holeData || !holeData.waypointMarkers) return;
+    const key = isSecond ? 'secondWaypointMarkers' : 'waypointMarkers';
+    if (!holeData || !holeData[key]) return;
     adminMap.removeLayer(m);
-    holeData.waypointMarkers = holeData.waypointMarkers.filter(wp => wp !== m);
+    holeData[key] = holeData[key].filter(wp => wp !== m);
+    updateAdminLivePath(holeNumber);
   });
   return m;
+}
+
+// Live-updating path preview for a hole's tee->waypoints->basket line
+// (and, if a 2nd tee exists, its own dashed path) — redrawn from
+// scratch on every placement, drag, or removal so it always matches
+// exactly what's currently on the map. Uses the same curve math as the
+// final saved-course rendering (catmullRomSplinePoints, in round.js).
+function adminLLArr(marker) {
+  const ll = marker.getLatLng();
+  return [ll.lat, ll.lng];
+}
+
+function updateAdminLivePath(holeNumber) {
+  const holeData = adminHoleMarkers[holeNumber];
+  if (!holeData || !adminMap) return;
+
+  if (holeData.livePath) { adminMap.removeLayer(holeData.livePath); holeData.livePath = null; }
+  if (holeData.teeMarker && holeData.basketMarker) {
+    const pts = [adminLLArr(holeData.teeMarker)];
+    (holeData.waypointMarkers || []).forEach(m => pts.push(adminLLArr(m)));
+    pts.push(adminLLArr(holeData.basketMarker));
+    holeData.livePath = L.polyline(catmullRomSplinePoints(pts), { color: '#FFD400', weight: 2, opacity: 0.85 }).addTo(adminMap);
+  }
+
+  if (holeData.secondLivePath) { adminMap.removeLayer(holeData.secondLivePath); holeData.secondLivePath = null; }
+  if (holeData.secondTeeMarker) {
+    const endBasket = (holeData.secondPathTarget === 'primary') ? holeData.basketMarker : (holeData.secondBasketMarker || holeData.basketMarker);
+    if (endBasket) {
+      const pts2 = [adminLLArr(holeData.secondTeeMarker)];
+      (holeData.secondWaypointMarkers || []).forEach(m => pts2.push(adminLLArr(m)));
+      pts2.push(adminLLArr(endBasket));
+      holeData.secondLivePath = L.polyline(catmullRomSplinePoints(pts2), { color: '#FFD400', weight: 2, opacity: 0.85, dashArray: '4,6' }).addTo(adminMap);
+    }
+  }
 }
 
 function handleAdminMapClick(e) {
@@ -488,6 +603,7 @@ function handleAdminMapClick(e) {
     } else {
       const m = L.marker(e.latlng, { icon: makeTeeDivIcon(0, scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
       m._rotationDeg = 0;
+      m.on('drag', () => updateAdminLivePath(holeNumber));
       updateMarkerHoleLabel(m, [holeNumber]);
       holeData.teeMarker = m;
     }
@@ -496,6 +612,7 @@ function handleAdminMapClick(e) {
       holeData.basketMarker.setLatLng(e.latlng);
     } else {
       const m = L.marker(e.latlng, { icon: makeBasketIcon(scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
+      m.on('drag', () => updateAdminLivePath(holeNumber));
       updateMarkerHoleLabel(m, [holeNumber]);
       holeData.basketMarker = m;
     }
@@ -505,6 +622,7 @@ function handleAdminMapClick(e) {
     } else {
       const m = L.marker(e.latlng, { icon: makeSecondTeeDivIcon(0, scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
       m._rotationDeg = 0;
+      m.on('drag', () => updateAdminLivePath(holeNumber));
       updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
       holeData.secondTeeMarker = m;
     }
@@ -513,14 +631,20 @@ function handleAdminMapClick(e) {
       holeData.secondBasketMarker.setLatLng(e.latlng);
     } else {
       const m = L.marker(e.latlng, { icon: makeSecondBasketIcon(scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
+      m.on('drag', () => updateAdminLivePath(holeNumber));
       updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
       holeData.secondBasketMarker = m;
     }
   } else if (kind === 'waypoint') {
     holeData.waypointMarkers = holeData.waypointMarkers || [];
-    holeData.waypointMarkers.push(createAdminWaypointMarker(e.latlng, holeNumber));
+    holeData.waypointMarkers.push(createAdminWaypointMarker(e.latlng, holeNumber, false));
+  } else if (kind === 'secondWaypoint') {
+    holeData.secondWaypointMarkers = holeData.secondWaypointMarkers || [];
+    holeData.secondWaypointMarkers.push(createAdminWaypointMarker(e.latlng, holeNumber, true));
   }
   adminArmedAction = null;
+  updateAdminLivePath(holeNumber);
+  if (adminSelectedHole === holeNumber) updateAdminSecondPathTargetButton();
 }
 
 // Called on 'zoomend' — updates every placed tee/basket marker's size to
@@ -626,6 +750,15 @@ async function saveAdminCourse() {
         const ll = m.getLatLng();
         return { lat: ll.lat, lng: ll.lng };
       });
+    }
+    if (holeData && holeData.secondWaypointMarkers && holeData.secondWaypointMarkers.length) {
+      hole.secondWaypoints = holeData.secondWaypointMarkers.map(m => {
+        const ll = m.getLatLng();
+        return { lat: ll.lat, lng: ll.lng };
+      });
+    }
+    if (holeData && holeData.secondTeeMarker && holeData.secondBasketMarker) {
+      hole.secondPathTarget = holeData.secondPathTarget === 'primary' ? 'primary' : 'second';
     }
     holes.push(hole);
   });
