@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=83"/>
+  <link rel="stylesheet" href="css/styles.css?v=90"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -200,10 +200,145 @@
     </div>
   </div>
 
+  <!-- Field Work: choose existing vs. new field -->
+  <div id="field-work-choice-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;">
+      <h4>Field Work</h4>
+      <p>Use an existing field, or create a new one?</p>
+      <div style="display:flex;gap:0.6rem;justify-content:center;margin-top:1rem;flex-wrap:wrap;">
+        <button id="field-work-use-existing-btn" class="paper-btn">Use Existing Field</button>
+        <button id="field-work-create-new-btn" class="paper-btn">Create New Field</button>
+      </div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="field-work-choice-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Work: pick from existing fields -->
+  <div id="field-select-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;">
+      <h4>Select a Field</h4>
+      <select id="field-select-dropdown" style="width:100%;"></select>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="field-select-go-btn" class="paper-btn">Go</button>
+        <button id="field-select-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Work: new field name + address -->
+  <div id="new-field-info-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:560px;width:92vw;text-align:left;">
+      <h4 style="text-align:center;">New Field</h4>
+      <label for="new-field-name-input">Field Name</label>
+      <input type="text" id="new-field-name-input" placeholder="e.g. Riverside Park" style="width:100%;"/>
+      <label for="new-field-street-input" style="margin-top:0.6rem;display:block;">Street</label>
+      <input type="text" id="new-field-street-input" placeholder="123 Main St" style="width:100%;"/>
+      <label for="new-field-city-state-input" style="margin-top:0.6rem;display:block;">City, State</label>
+      <input type="text" id="new-field-city-state-input" placeholder="Springfield, IL" style="width:100%;"/>
+      <p id="new-field-search-status" style="min-height:1.2rem;font-size:0.85rem;"></p>
+      <div style="text-align:center;margin-top:0.5rem;">
+        <button id="new-field-search-btn" class="paper-btn">Enter</button>
+        <button id="new-field-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Work: tee placement map -->
+  <div id="field-tee-placement-modal" class="custom-modal">
+    <div class="custom-modal-content map-popup-content">
+      <div id="field-tee-placement-map" class="map-popup-fill"></div>
+      <div class="map-popup-overlay-bar top">
+        <p id="field-tee-placement-instructions" style="font-size:0.9rem;text-align:center;margin:0;">Tap the map to place the tee.</p>
+        <div id="field-tee-placement-rotation-row" class="hide" style="margin-top:0.4rem;">
+          <label for="field-tee-placement-rotation" style="font-size:0.8rem;">Tee facing direction</label>
+          <input type="range" id="field-tee-placement-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
+        </div>
+      </div>
+      <button id="field-tee-placement-cancel-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Cancel</button>
+      <button id="field-tee-placement-confirm-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Enter</button>
+    </div>
+  </div>
+
+  <!-- Field Work: session setup (shot type, discs, notes) -->
+  <div id="field-work-setup-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:520px;width:94vw;max-height:85vh;overflow-y:auto;text-align:left;">
+      <h4 style="text-align:center;">Field Work Setup</h4>
+
+      <label for="fw-shot-type-select">Shot Type</label>
+      <select id="fw-shot-type-select" style="width:100%;">
+        <option value="backhand">Backhand</option>
+        <option value="forehand">Forehand</option>
+        <option value="overhand">Overhand</option>
+      </select>
+
+      <label for="fw-disc-count-select" style="margin-top:0.8rem;display:block;">How many discs?</label>
+      <select id="fw-disc-count-select" style="width:100%;">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+
+      <div id="fw-disc-slots-container" style="margin-top:0.8rem;"></div>
+
+      <label for="fw-notes-input" style="margin-top:0.8rem;display:block;">Notes</label>
+      <textarea id="fw-notes-input" rows="3" style="width:100%;"></textarea>
+
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="fw-setup-back-btn" class="paper-btn">Back</button>
+        <button id="fw-setup-next-btn" class="paper-btn">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Work: throw-marking map -->
+  <div id="field-work-map-modal" class="custom-modal">
+    <div class="custom-modal-content map-popup-content">
+      <div id="field-work-map" class="map-popup-fill"></div>
+
+      <div class="map-popup-overlay-bar top">
+        <p id="fw-map-instructions" style="font-size:0.9rem;text-align:center;margin:0;"></p>
+        <div id="fw-map-weather" style="margin-top:0.4rem;display:flex;justify-content:center;"></div>
+        <div id="fw-disc-picker-row" class="map-popup-inline-btn-row hide" style="margin-top:0.4rem;">
+          <select id="fw-active-disc-select" style="max-width:100%;"></select>
+        </div>
+        <div id="fw-arrow-adjust-row" class="hide" style="margin-top:0.5rem;">
+          <label for="fw-arrow-rotation" style="font-size:0.8rem;">Adjust direction</label>
+          <input type="range" id="fw-arrow-rotation" min="-45" max="45" value="0" step="1" style="width:100%;"/>
+        </div>
+        <div id="fw-distance-override-row" class="hide" style="margin-top:0.5rem;">
+          <label for="fw-distance-override-input" style="font-size:0.8rem;">Distance between discs (ft)</label>
+          <input type="number" id="fw-distance-override-input" style="width:100%;"/>
+        </div>
+        <div id="fw-results-block" class="hide" style="margin-top:0.5rem;font-size:0.85rem;text-align:center;"></div>
+      </div>
+
+      <button id="fw-map-back-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Back</button>
+      <button id="fw-map-finish-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left-upper">Finish Practice</button>
+      <button id="fw-map-mark-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right">Mark</button>
+      <button id="fw-map-save-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Save</button>
+    </div>
+  </div>
+
+  <!-- Field Work: GPS accurate-reading overlay -->
+  <div id="fw-gps-capture-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:360px;text-align:center;">
+      <h4>Getting an accurate GPS reading&hellip;</h4>
+      <p>Hold your position for a few seconds.</p>
+    </div>
+  </div>
+
   <!-- Stats Modal -->
   <div id="stats-modal" class="custom-modal">
     <div class="custom-modal-content" style="max-width:520px;width:95%;max-height:80vh;overflow-y:auto;text-align:left;">
       <h4>Stats</h4>
+      <div id="stats-tab-bar" style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:0.75rem;">
+        <button type="button" class="paper-btn stats-tab-btn" data-tab="rounds">Rounds</button>
+        <button type="button" class="paper-btn stats-tab-btn" data-tab="fieldwork">Fieldwork</button>
+      </div>
       <div id="stats-modal-content"></div>
       <div style="text-align:center;margin-top:1rem;">
         <button id="clear-all-stats-btn" class="paper-btn">Clear All Stats</button>
@@ -221,6 +356,28 @@
       <div style="text-align:center;margin-top:1rem;">
         <button id="close-last-round-modal-btn" class="paper-btn">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Field Work: session history list -->
+  <div id="field-work-history-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;max-height:80vh;overflow-y:auto;text-align:left;">
+      <h4 style="text-align:center;">Fieldwork History</h4>
+      <div id="fw-history-list"></div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="fw-history-close-btn" class="paper-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field Work: single session's map (tee + all marked discs overlaid) -->
+  <div id="field-work-history-map-modal" class="custom-modal">
+    <div class="custom-modal-content map-popup-content">
+      <div id="field-work-history-map" class="map-popup-fill"></div>
+      <div class="map-popup-overlay-bar top">
+        <div id="fw-history-map-weather" style="display:flex;justify-content:center;"></div>
+      </div>
+      <button id="fw-history-map-close-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Close</button>
     </div>
   </div>
 
@@ -455,6 +612,7 @@
     <h3 id="putt-practice-hole-label">Putt Practice</h3>
     <button id="putt-practice-close-btn" class="paper-btn">Close</button>
   </div>
+  <div id="putt-practice-weather" style="display:flex;justify-content:center;padding:0.4rem 0;"></div>
   <div id="putt-practice-map"></div>
 </div>
 
@@ -506,6 +664,7 @@
 
   <!-- Scorecard -->
   <div id="scorecard-card" class="scorecard-panel hide">
+    <div id="scorecard-weather"></div>
     <div id="scorecard-container" class="scorecard-scroll"></div>
     <div class="button-row scorecard-actions">
       <button id="finish-round-btn" class="btn btn--big btn--purple-blue">Finish Round</button>
@@ -534,17 +693,19 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
-  <script src="js/db.js?v=4"></script>
+  <script src="js/db.js?v=6"></script>
   <script src="js/stock-courses.js?v=9"></script>
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=23"></script>
+  <script src="js/weather.js?v=4"></script>
   <script src="js/course-wizard.js?v=12"></script>
+  <script src="js/field-work.js?v=11"></script>
   <script src="js/admin-panel.js?v=16"></script>
-  <script src="js/round.js?v=9"></script>
-  <script src="js/putt-practice.js?v=2"></script>
+  <script src="js/round.js?v=11"></script>
+  <script src="js/putt-practice.js?v=3"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=114"></script>
+  <script src="js/main.js?v=116"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 

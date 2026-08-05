@@ -27,9 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
   document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
-  document.getElementById('field-work-btn')?.addEventListener('click', () => {
-    showGenericModal('Field Work is coming soon.');
-  });
+  document.getElementById('field-work-btn')?.addEventListener('click', openFieldWorkChoiceModal);
   document.getElementById('putt-practice-btn')?.addEventListener('click', () => openCourseListModal('putt-practice'));
   document.getElementById('add-disc-btn')?.addEventListener('click', openAddDiscSearchModal);
   document.getElementById('admin-map-entry-btn')?.addEventListener('click', openAdminPanel);
@@ -525,13 +523,24 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('clear-all-stats-btn')?.addEventListener('click', () => {
-    showConfirmModal('This will permanently delete ALL saved rounds for every course. This cannot be undone. Continue?', clearAllStats);
+    if (statsActiveTab === 'fieldwork') {
+      showConfirmModal('This will permanently delete ALL saved Field Work sessions. This cannot be undone. Continue?', clearAllFieldWorkStats);
+    } else {
+      showConfirmModal('This will permanently delete ALL saved rounds for every course. This cannot be undone. Continue?', clearAllStats);
+    }
   });
 
   document.getElementById('delete-selected-rounds-btn')?.addEventListener('click', () => {
     const ids = getSelectedRoundIds();
     if (ids.length === 0) { showGenericModal('No rounds selected.'); return; }
     showConfirmModal('Delete ' + ids.length + ' selected round' + (ids.length > 1 ? 's' : '') + '? This cannot be undone.', () => deleteSelectedRounds(ids));
+  });
+
+  document.querySelectorAll('.stats-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      statsActiveTab = btn.dataset.tab;
+      renderStatsTabs();
+    });
   });
 });
 

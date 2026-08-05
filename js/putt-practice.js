@@ -56,6 +56,12 @@ function openPuttPracticeView(course, hole) {
 
   const center = [hole.basket.lat, hole.basket.lng];
 
+  const weatherEl = document.getElementById('putt-practice-weather');
+  if (weatherEl) weatherEl.innerHTML = '<div class="weather-widget-unavailable">Loading weather&hellip;</div>';
+  fetchNwsWeather(hole.basket.lat, hole.basket.lng).then(weatherData => {
+    if (weatherEl) renderWeatherWidget(weatherEl, weatherData);
+  });
+
   setTimeout(() => {
     puttPracticeMap.invalidateSize();
     puttPracticeMap.setView(center, 21);
@@ -89,6 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('putt-practice-close-btn')?.addEventListener('click', () => {
     document.getElementById('putt-practice-screen').classList.remove('active');
+    const weatherEl = document.getElementById('putt-practice-weather');
+    if (weatherEl) weatherEl.innerHTML = '';
     if (puttPracticeMap) {
       stopLiveLocationTracking(puttPracticeMapLocationTracker);
       puttPracticeMapLocationTracker = null;

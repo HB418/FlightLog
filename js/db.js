@@ -6,10 +6,16 @@
      - discs:   { id, name, brand, category, speed, glide, turn, fade,
                   stability, pic, manual } — manual:true means it was
                   hand-entered rather than found via the DiscIt API
+     - fields:  { id, name, address, lat, lng, tee: {lat, lng} } — a
+                  saved Field Work location, one tee per field
+     - fieldSessions: { id, fieldId, fieldName, shotType, notes,
+                  discSlots, throws: [{shotType, discA, discB, teeToA,
+                  teeToB, aToB, bearing, timestamp}], date } — one
+                  Finish Practice session's worth of Field Work throws
 */
 
 const FLIGHTLOG_DB_NAME = 'DiscTallyDB';
-const FLIGHTLOG_DB_VERSION = 3;
+const FLIGHTLOG_DB_VERSION = 5;
 
 function openDiscTallyDB() {
   return new Promise((resolve, reject) => {
@@ -25,6 +31,12 @@ function openDiscTallyDB() {
       }
       if (!db.objectStoreNames.contains('discs')) {
         db.createObjectStore('discs', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('fields')) {
+        db.createObjectStore('fields', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('fieldSessions')) {
+        db.createObjectStore('fieldSessions', { keyPath: 'id', autoIncrement: true });
       }
     };
     req.onsuccess = (e) => resolve(e.target.result);
@@ -146,6 +158,78 @@ function deleteDisc(db, id) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('discs', 'readwrite');
     tx.objectStore('discs').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addField(db, field) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fields', 'readwrite');
+    const req = tx.objectStore('fields').add(field);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllFields(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fields', 'readonly');
+    const req = tx.objectStore('fields').getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getFieldById(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fields', 'readonly');
+    const req = tx.objectStore('fields').get(id);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function updateField(db, field) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fields', 'readwrite');
+    const req = tx.objectStore('fields').put(field);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function deleteField(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fields', 'readwrite');
+    tx.objectStore('fields').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addFieldSession(db, session) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fieldSessions', 'readwrite');
+    const req = tx.objectStore('fieldSessions').add(session);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllFieldSessions(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fieldSessions', 'readonly');
+    const req = tx.objectStore('fieldSessions').getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function clearAllFieldSessions(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('fieldSessions', 'readwrite');
+    tx.objectStore('fieldSessions').clear();
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });

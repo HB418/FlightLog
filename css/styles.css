@@ -698,6 +698,51 @@ body.dark-mode .score-display.has-score {
 body.dark-mode .stats-round-row {
   border-bottom-color: #444;
 }
+.fw-history-row {
+  cursor: pointer;
+}
+.fw-history-row:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+body.dark-mode .fw-history-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== Weather widget (scorecard, Field Work, Putt Practice) ===== */
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+  width: fit-content;
+}
+body.dark-mode .weather-widget {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.weather-widget-unavailable {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  padding: 0.3rem 0.6rem;
+}
+.weather-widget-wind {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.weather-widget-arrow {
+  display: inline-block;
+  transition: transform 0.2s linear;
+}
+.weather-widget-compass-btn {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  min-height: 0;
+}
 
 .stats-overall-block,
 .stats-top5-block,
@@ -1081,6 +1126,21 @@ body.dark-mode .hole-record-box {
   padding: 0.35rem 0.7rem;
   font-size: 0.8rem;
 }
+/* The active-disc picker on the Field Work map lives in the same dark
+   overlay bar, but as a plain <select> — with no styling of its own it
+   falls back to the browser's default form-control look (its own
+   background/border/text-color), which reads as a disconnected box
+   against the bar. Match it to the same pill/button treatment instead. */
+.map-popup-inline-btn-row select {
+  min-height: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #222;
+  border: none;
+  border-radius: 0.3rem;
+  max-width: 60vw;
+}
 /* Magnifying-glass search toggle in the corner of the Courses/My Discs
    list modals. Collapsed: just the icon. Clicking it reveals the input
    to its left (and focuses it); clicking again collapses and clears
@@ -1134,6 +1194,85 @@ body.dark-mode .list-search-toggle-btn {
 .custom-modal-content p {
   margin-bottom: 1rem;
   font-size: 0.9rem;
+}
+/* Field Work session setup — searchable disc picker ("combobox"): a
+   plain text input that filters a click-to-select list as you type,
+   since a native <select> can't do live text-filtering of its options. */
+.disc-combobox {
+  position: relative;
+}
+.disc-combobox-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  z-index: 20;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+.disc-combobox-item {
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.disc-combobox-item:hover {
+  background: #f0f0f0;
+}
+.disc-combobox-empty {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+body.dark-mode .disc-combobox-list {
+  background: #222;
+  border-color: #444;
+}
+body.dark-mode .disc-combobox-item:hover {
+  background: #333;
+}
+/* Field Work disc color picker — actual clickable color swatches
+   instead of a <select>, since browsers don't reliably render an
+   option's background color on the closed dropdown box itself. */
+.fw-color-swatches {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.custom-modal-content .fw-color-swatch {
+  width: 1.4rem !important;
+  height: 1.4rem !important;
+  min-width: 1.4rem;
+  min-height: 1.4rem;
+  max-width: 1.4rem;
+  max-height: 1.4rem;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: inline-block;
+}
+.custom-modal-content .fw-color-swatch.selected {
+  border-color: var(--dark-teal);
+  box-shadow: 0 0 0 2px var(--dark-teal);
+}
+body.dark-mode .custom-modal-content .fw-color-swatch.selected {
+  border-color: var(--mustard);
+  box-shadow: 0 0 0 2px var(--mustard);
+}
+/* Stats modal tabs (Rounds / Fieldwork) */
+.stats-tab-btn {
+  opacity: 0.55;
+}
+.stats-tab-btn.active-tab {
+  opacity: 1;
 }
 .custom-modal-content .paper-btn,
 .custom-modal-content button {

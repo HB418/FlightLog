@@ -53,6 +53,7 @@ function startRound(course) {
     courseLat: course.lat != null ? course.lat : null,
     courseLng: course.lng != null ? course.lng : null,
     hasCourseMap: hasCourseMap,
+    weather: null,
     players: [
       { name: playerName, scores: {} }
     ]
@@ -77,6 +78,28 @@ function startRound(course) {
     }
   }
   buildScorecard(currentRound);
+  fetchAndRenderRoundWeather();
+}
+
+// Fetches once (not polled/live) using the course's saved location —
+// a snapshot of conditions when the round started, matching what gets
+// saved with the round record later. Skipped entirely for courses with
+// no saved lat/lng, and gracefully shows "unavailable" for anything
+// outside NWS's US-only coverage or if the fetch fails for any reason.
+function fetchAndRenderRoundWeather() {
+  const weatherEl = document.getElementById('scorecard-weather');
+  if (!currentRound || currentRound.courseLat == null || currentRound.courseLng == null) {
+    if (weatherEl) weatherEl.innerHTML = '';
+    return;
+  }
+  if (weatherEl) weatherEl.innerHTML = '<div class="weather-widget-unavailable">Loading weather&hellip;</div>';
+  fetchNwsWeather(currentRound.courseLat, currentRound.courseLng).then(weatherData => {
+    if (currentRound) {
+      currentRound.weather = weatherData;
+      saveInProgressRound();
+    }
+    if (weatherEl) renderWeatherWidget(weatherEl, weatherData);
+  });
 }
 
 // Restores a round from localStorage after an accidental close (or
@@ -101,6 +124,18 @@ function resumeInProgressRound() {
     }
   }
   buildScorecard(currentRound);
+
+  // A resumed round may already have its weather snapshot from before
+  // the accidental close — reuse it rather than re-fetching (keeps the
+  // "conditions when the round started" meaning intact). Older saved
+  // rounds from before this feature existed won't have it, so fetch
+  // fresh in that case.
+  const weatherEl = document.getElementById('scorecard-weather');
+  if (currentRound.weather) {
+    if (weatherEl) renderWeatherWidget(weatherEl, currentRound.weather);
+  } else {
+    fetchAndRenderRoundWeather();
+  }
 }
 
 function exitRound() {
@@ -635,6 +670,7 @@ async function finishRound() {
     courseName: currentRound.courseName,
     date: new Date().toISOString(),
     totalPar: totalPar,
+    weather: currentRound.weather || null,
     holes: currentRound.holes.map(h => ({ number: h.number, par: h.par })),
     players: currentRound.players.map(p => {
       const total = computePlayerTotal(p);
@@ -703,7 +739,25 @@ function saveAddPlayer() {
 
 /* ---------- Stats ---------- */
 
+let statsActiveTab = 'rounds'; // 'rounds' | 'fieldwork'
+
 async function openStatsModal() {
+  document.getElementById('stats-modal').classList.add('active');
+  await renderStatsTabs();
+}
+
+async function renderStatsTabs() {
+  document.querySelectorAll('.stats-tab-btn').forEach(btn => {
+    btn.classList.toggle('active-tab', btn.dataset.tab === statsActiveTab);
+  });
+  if (statsActiveTab === 'fieldwork') {
+    await renderFieldworkStatsTab();
+  } else {
+    await renderRoundsStatsTab();
+  }
+}
+
+async function renderRoundsStatsTab() {
   const db = await openDiscTallyDB();
   const rounds = await getAllRounds(db);
   const courses = await getAllCourses(db);
@@ -719,7 +773,6 @@ async function openStatsModal() {
     container.innerHTML = '<p>No rounds recorded yet. Finish a round to see stats here.</p>';
     if (clearBtn) clearBtn.classList.add('hide');
     if (deleteBtn) deleteBtn.classList.add('hide');
-    document.getElementById('stats-modal').classList.add('active');
     return;
   }
   if (clearBtn) clearBtn.classList.remove('hide');
@@ -769,7 +822,6 @@ async function openStatsModal() {
   html += '</div>';
 
   container.innerHTML = html;
-  document.getElementById('stats-modal').classList.add('active');
 
   document.getElementById('stats-course-select')?.addEventListener('change', (e) => {
     renderCourseDetail(e.target.value, rounds, coursesById, userName);
