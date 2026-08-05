@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
   document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
   document.getElementById('field-work-btn')?.addEventListener('click', openFieldWorkChoiceModal);
-  document.getElementById('putt-practice-btn')?.addEventListener('click', () => openCourseListModal('putt-practice'));
+  document.getElementById('putt-practice-btn')?.addEventListener('click', openPuttingAreaChoiceModal);
   document.getElementById('add-disc-btn')?.addEventListener('click', openAddDiscSearchModal);
   document.getElementById('admin-map-entry-btn')?.addEventListener('click', openAdminPanel);
   document.getElementById('admin-panel-close-btn')?.addEventListener('click', closeAdminPanel);
@@ -299,11 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const course = await getCourseById(db, selectedCourseListId);
     if (!course) { showGenericModal('Course not found.'); return; }
     document.getElementById('course-list-modal').classList.remove('active');
-    if (courseListMode === 'putt-practice') {
-      openPuttPracticeHolePicker(course);
-    } else {
-      startRound(course);
-    }
+    startRound(course);
   });
 
   document.getElementById('course-list-delete-btn')?.addEventListener('click', async () => {
@@ -525,6 +521,8 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('clear-all-stats-btn')?.addEventListener('click', () => {
     if (statsActiveTab === 'fieldwork') {
       showConfirmModal('This will permanently delete ALL saved Field Work sessions. This cannot be undone. Continue?', clearAllFieldWorkStats);
+    } else if (statsActiveTab === 'putting') {
+      showConfirmModal('This will permanently delete ALL saved Putt Practice sessions. This cannot be undone. Continue?', clearAllPuttingStats);
     } else {
       showConfirmModal('This will permanently delete ALL saved rounds for every course. This cannot be undone. Continue?', clearAllStats);
     }
@@ -718,12 +716,6 @@ async function loadCourseOptions() {
 
 async function handleCourseTileClick(course) {
   document.getElementById('course-list-modal').classList.remove('active');
-
-  if (courseListMode === 'putt-practice') {
-    openPuttPracticeHolePicker(course);
-    return;
-  }
-  // Default: 'select' mode
   startRound(course);
 }
 

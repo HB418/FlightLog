@@ -739,7 +739,7 @@ function saveAddPlayer() {
 
 /* ---------- Stats ---------- */
 
-let statsActiveTab = 'rounds'; // 'rounds' | 'fieldwork'
+let statsActiveTab = 'rounds'; // 'rounds' | 'fieldwork' | 'putting'
 
 async function openStatsModal() {
   document.getElementById('stats-modal').classList.add('active');
@@ -752,6 +752,8 @@ async function renderStatsTabs() {
   });
   if (statsActiveTab === 'fieldwork') {
     await renderFieldworkStatsTab();
+  } else if (statsActiveTab === 'putting') {
+    await renderPuttingStatsTab();
   } else {
     await renderRoundsStatsTab();
   }

@@ -338,6 +338,7 @@
       <div id="stats-tab-bar" style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:0.75rem;">
         <button type="button" class="paper-btn stats-tab-btn" data-tab="rounds">Rounds</button>
         <button type="button" class="paper-btn stats-tab-btn" data-tab="fieldwork">Fieldwork</button>
+        <button type="button" class="paper-btn stats-tab-btn" data-tab="putting">Putting</button>
       </div>
       <div id="stats-modal-content"></div>
       <div style="text-align:center;margin-top:1rem;">
@@ -597,23 +598,99 @@
   </div>
 </section>
 
-<!-- Putt Practice: hole picker (shown after choosing a course) -->
-<div id="putt-practice-hole-modal" class="custom-modal">
-  <div class="custom-modal-content" style="max-width:340px;width:90%;text-align:left;">
-    <h4 style="text-align:center;">Select a Hole</h4>
-    <div id="putt-practice-hole-list" style="max-height:320px;overflow-y:auto;border:1px solid #ccc;border-radius:0.4rem;margin-bottom:0.75rem;"></div>
-    <button id="putt-practice-hole-cancel-btn" class="paper-btn" style="width:100%;">Cancel</button>
-  </div>
-</div>
-
 <!-- Putt Practice: full-screen top-down basket view with C1/C2 circles -->
 <div id="putt-practice-screen">
   <div class="admin-panel-header">
     <h3 id="putt-practice-hole-label">Putt Practice</h3>
+    <button id="putt-practice-finish-btn" class="paper-btn">Finish Practice</button>
     <button id="putt-practice-close-btn" class="paper-btn">Close</button>
   </div>
   <div id="putt-practice-weather" style="display:flex;justify-content:center;padding:0.4rem 0;"></div>
+  <div id="putt-practice-controls" style="padding:0 0.5rem 0.4rem;text-align:center;">
+    <p id="putt-practice-instructions" style="font-size:0.85rem;margin:0 0 0.4rem;"></p>
+    <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+      <button id="putt-practice-add-spot-btn" type="button" class="paper-btn">Add Spot</button>
+      <select id="putt-practice-reuse-spot-select" class="hide" style="max-width:50vw;"></select>
+      <button id="putt-practice-use-existing-spot-btn" type="button" class="paper-btn hide">Go to Spot</button>
+      <button id="putt-practice-spot-permanent-btn" type="button" class="paper-btn hide">Permanent</button>
+      <button id="putt-practice-spot-temporary-btn" type="button" class="paper-btn hide">Temporary</button>
+      <button id="putt-practice-mark-btn" type="button" class="paper-btn hide">Mark</button>
+      <button id="putt-practice-cancel-add-spot-btn" type="button" class="paper-btn hide">Cancel</button>
+    </div>
+    <div id="putt-practice-record-row" class="hide" style="margin-top:0.5rem;">
+      <p id="putt-practice-record-distance" style="font-size:0.85rem;margin:0 0 0.4rem;"></p>
+      <div style="display:flex;gap:0.6rem;justify-content:center;align-items:center;flex-wrap:wrap;">
+        <label style="font-size:0.85rem;">Attempts
+          <input type="number" id="putt-practice-attempts-input" min="1" step="1" style="width:4rem;"/>
+        </label>
+        <label style="font-size:0.85rem;">Makes
+          <input type="number" id="putt-practice-makes-input" min="0" step="1" style="width:4rem;"/>
+        </label>
+        <button id="putt-practice-save-results-btn" type="button" class="paper-btn">Save</button>
+        <button id="putt-practice-cancel-results-btn" type="button" class="paper-btn">Cancel</button>
+      </div>
+      <p id="putt-practice-record-status" style="font-size:0.8rem;min-height:1.1rem;margin:0.3rem 0 0;"></p>
+    </div>
+    <div id="putt-practice-session-log" style="font-size:0.8rem;margin-top:0.5rem;max-height:5.5rem;overflow-y:auto;"></div>
+  </div>
   <div id="putt-practice-map"></div>
+</div>
+
+<!-- Putt Practice: choose existing vs. new putting area -->
+<div id="putting-area-choice-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:420px;">
+    <h4>Putt Practice</h4>
+    <p>Use an existing putting area, or create a new one?</p>
+    <div style="display:flex;gap:0.6rem;justify-content:center;margin-top:1rem;flex-wrap:wrap;">
+      <button id="putting-area-use-existing-btn" class="paper-btn">Use Existing Area</button>
+      <button id="putting-area-create-new-btn" class="paper-btn">Create New Area</button>
+    </div>
+    <div style="text-align:center;margin-top:1rem;">
+      <button id="putting-area-choice-cancel-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Putt Practice: pick from existing areas -->
+<div id="putting-area-select-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:420px;">
+    <h4>Select a Putting Area</h4>
+    <select id="putting-area-select-dropdown" style="width:100%;"></select>
+    <div style="text-align:center;margin-top:1rem;">
+      <button id="putting-area-select-go-btn" class="paper-btn">Go</button>
+      <button id="putting-area-select-cancel-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Putt Practice: new area name + address -->
+<div id="new-putting-area-info-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:560px;width:92vw;text-align:left;">
+    <h4 style="text-align:center;">New Putting Area</h4>
+    <label for="new-putting-area-name-input">Area Name</label>
+    <input type="text" id="new-putting-area-name-input" placeholder="e.g. Riverside Park" style="width:100%;"/>
+    <label for="new-putting-area-street-input" style="margin-top:0.6rem;display:block;">Street</label>
+    <input type="text" id="new-putting-area-street-input" placeholder="123 Main St" style="width:100%;"/>
+    <label for="new-putting-area-city-state-input" style="margin-top:0.6rem;display:block;">City, State</label>
+    <input type="text" id="new-putting-area-city-state-input" placeholder="Springfield, IL" style="width:100%;"/>
+    <p id="new-putting-area-search-status" style="min-height:1.2rem;font-size:0.85rem;"></p>
+    <div style="text-align:center;margin-top:0.5rem;">
+      <button id="new-putting-area-search-btn" class="paper-btn">Enter</button>
+      <button id="new-putting-area-cancel-btn" class="paper-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Putt Practice: basket placement map -->
+<div id="putting-area-basket-placement-modal" class="custom-modal">
+  <div class="custom-modal-content map-popup-content">
+    <div id="putting-area-basket-placement-map" class="map-popup-fill"></div>
+    <div class="map-popup-overlay-bar top">
+      <p id="putting-area-basket-placement-instructions" style="font-size:0.9rem;text-align:center;margin:0;">Tap the map to place the basket.</p>
+    </div>
+    <button id="putting-area-basket-placement-cancel-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Cancel</button>
+    <button id="putting-area-basket-placement-confirm-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Enter</button>
+  </div>
 </div>
 
 <!-- Course List Modal: shared by the "Courses" nav link (Delete mode)
@@ -693,7 +770,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
-  <script src="js/db.js?v=6"></script>
+  <script src="js/db.js?v=7"></script>
   <script src="js/stock-courses.js?v=9"></script>
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=23"></script>
@@ -701,11 +778,11 @@
   <script src="js/course-wizard.js?v=12"></script>
   <script src="js/field-work.js?v=11"></script>
   <script src="js/admin-panel.js?v=16"></script>
-  <script src="js/round.js?v=11"></script>
-  <script src="js/putt-practice.js?v=3"></script>
+  <script src="js/round.js?v=12"></script>
+  <script src="js/putt-practice.js?v=8"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=116"></script>
+  <script src="js/main.js?v=118"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 

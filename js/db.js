@@ -12,10 +12,20 @@
                   discSlots, throws: [{shotType, discA, discB, teeToA,
                   teeToB, aToB, bearing, timestamp}], date } — one
                   Finish Practice session's worth of Field Work throws
+     - puttingAreas: { id, name, address, lat, lng, basket: {lat, lng} }
+                  — a saved Putt Practice location, one basket per area
+     - puttingSpots: { id, areaId, number, lat, lng } — a PERMANENT
+                  numbered throwing spot at an area, reusable across
+                  future visits (temporary spots aren't stored here —
+                  they only ever live in a session's own record)
+     - puttingSessions: { id, areaId, areaName, date, weather,
+                  rounds: [{spotId, spotNumber, isPermanent, lat, lng,
+                  distanceFt, attempts, makes}] } — one Finish Practice
+                  session's worth of putting results
 */
 
 const FLIGHTLOG_DB_NAME = 'DiscTallyDB';
-const FLIGHTLOG_DB_VERSION = 5;
+const FLIGHTLOG_DB_VERSION = 6;
 
 function openDiscTallyDB() {
   return new Promise((resolve, reject) => {
@@ -37,6 +47,16 @@ function openDiscTallyDB() {
       }
       if (!db.objectStoreNames.contains('fieldSessions')) {
         db.createObjectStore('fieldSessions', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('puttingAreas')) {
+        db.createObjectStore('puttingAreas', { keyPath: 'id', autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains('puttingSpots')) {
+        const spotsStore = db.createObjectStore('puttingSpots', { keyPath: 'id', autoIncrement: true });
+        spotsStore.createIndex('areaId', 'areaId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('puttingSessions')) {
+        db.createObjectStore('puttingSessions', { keyPath: 'id', autoIncrement: true });
       }
     };
     req.onsuccess = (e) => resolve(e.target.result);
@@ -230,6 +250,78 @@ function clearAllFieldSessions(db) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('fieldSessions', 'readwrite');
     tx.objectStore('fieldSessions').clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addPuttingArea(db, area) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingAreas', 'readwrite');
+    const req = tx.objectStore('puttingAreas').add(area);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllPuttingAreas(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingAreas', 'readonly');
+    const req = tx.objectStore('puttingAreas').getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getPuttingAreaById(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingAreas', 'readonly');
+    const req = tx.objectStore('puttingAreas').get(id);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addPuttingSpot(db, spot) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingSpots', 'readwrite');
+    const req = tx.objectStore('puttingSpots').add(spot);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getPuttingSpotsForArea(db, areaId) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingSpots', 'readonly');
+    const req = tx.objectStore('puttingSpots').index('areaId').getAll(areaId);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function addPuttingSession(db, session) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingSessions', 'readwrite');
+    const req = tx.objectStore('puttingSessions').add(session);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function getAllPuttingSessions(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingSessions', 'readonly');
+    const req = tx.objectStore('puttingSessions').getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function clearAllPuttingSessions(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('puttingSessions', 'readwrite');
+    tx.objectStore('puttingSessions').clear();
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });
