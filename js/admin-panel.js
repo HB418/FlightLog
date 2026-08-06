@@ -251,6 +251,8 @@ function openAdminEditor(course) {
   adminHoleMarkers = {};
   adminArmedAction = null;
   adminEditingLogoDataUrl = course ? (course.logo || null) : null;
+  const secondaryToggleEl = document.getElementById('admin-secondary-holes-toggle');
+  if (secondaryToggleEl) delete secondaryToggleEl.dataset.userSet;
   adminCourseLat = course && course.lat != null ? course.lat : null;
   adminCourseLng = course && course.lng != null ? course.lng : null;
   document.getElementById('admin-location-status').textContent = '';
@@ -474,6 +476,15 @@ function generateAdminHoleFields(course) {
   adminHoleHazards = {};
   selectAdminHole(null);
 
+  const secondaryToggle = document.getElementById('admin-secondary-holes-toggle');
+  // Default the toggle on if this course already has secondary-hole
+  // data, so opening an existing course for editing doesn't hide data
+  // that's actually there — otherwise default off for a clean simple view.
+  if (secondaryToggle && !secondaryToggle.dataset.userSet) {
+    secondaryToggle.checked = !!(course && course.holes && course.holes.some(h => h.secondLength));
+  }
+  const showSecondaryHoles = !!(secondaryToggle && secondaryToggle.checked);
+
   for (let i = 1; i <= count; i++) {
     const existingHole = course && course.holes ? course.holes.find(h => h.number === i) : null;
 
@@ -496,7 +507,15 @@ function generateAdminHoleFields(course) {
 
     const label = document.createElement('span');
     label.className = 'admin-hole-label';
-    label.textContent = 'Hole ' + i;
+    label.dataset.holeNumber = i;
+    label.dataset.role = 'main';
+    label.textContent = showSecondaryHoles ? (i + 'A') : String(i);
+
+    const secondLabel = document.createElement('span');
+    secondLabel.className = 'admin-hole-label';
+    secondLabel.dataset.holeNumber = i;
+    secondLabel.dataset.role = 'second';
+    secondLabel.textContent = i + 'B';
 
     const lengthInput = document.createElement('input');
     lengthInput.type = 'number';
@@ -505,6 +524,14 @@ function generateAdminHoleFields(course) {
     lengthInput.dataset.hole = i;
     lengthInput.dataset.field = 'length';
     if (existingHole) lengthInput.value = existingHole.length || '';
+
+    const secondLengthInput = document.createElement('input');
+    secondLengthInput.type = 'number';
+    secondLengthInput.min = '1';
+    secondLengthInput.placeholder = '2nd Tee (ft)';
+    secondLengthInput.dataset.hole = i;
+    secondLengthInput.dataset.field = 'secondLength';
+    if (existingHole) secondLengthInput.value = existingHole.secondLength || '';
 
     const parSelect = document.createElement('select');
     parSelect.dataset.hole = i;
@@ -517,22 +544,71 @@ function generateAdminHoleFields(course) {
       parSelect.appendChild(opt);
     }
 
-    const fieldsRow = document.createElement('div');
-    fieldsRow.style.display = 'flex';
-    fieldsRow.style.alignItems = 'center';
-    fieldsRow.style.gap = '0.5rem';
-    fieldsRow.style.width = '100%';
-    fieldsRow.appendChild(checkbox);
-    fieldsRow.appendChild(label);
-    fieldsRow.appendChild(lengthInput);
-    fieldsRow.appendChild(parSelect);
+    const secondParSelect = document.createElement('select');
+    secondParSelect.dataset.hole = i;
+    secondParSelect.dataset.field = 'secondPar';
+    for (let p = 2; p <= 7; p++) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = 'Par ' + p;
+      if (existingHole && existingHole.secondPar === p) opt.selected = true;
+      else if (!existingHole && p === 3) opt.selected = true;
+      secondParSelect.appendChild(opt);
+    }
+
+    // Fixed width + centered text so "1A"/"1B" (and any future 2-digit
+    // hole like "10A"/"10B") line up consistently regardless of how
+    // many characters the label actually has.
+    label.style.cssText = 'min-width:2.5rem;text-align:center;flex:0 0 auto;';
+    secondLabel.style.cssText = 'min-width:2.5rem;text-align:center;flex:0 0 auto;';
+
+    const fieldsRowA = document.createElement('div');
+    fieldsRowA.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:0.5rem;';
+    fieldsRowA.appendChild(label);
+    fieldsRowA.appendChild(lengthInput);
+    fieldsRowA.appendChild(parSelect);
+
+    const fieldsRowB = document.createElement('div');
+    fieldsRowB.className = 'admin-hole-row-b';
+    fieldsRowB.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:0.5rem;margin-top:0.35rem;';
+    fieldsRowB.appendChild(secondLabel);
+    fieldsRowB.appendChild(secondLengthInput);
+    fieldsRowB.appendChild(secondParSelect);
+
+    // The two stacked A/B rows live in their own column so the checkbox
+    // can sit beside that whole column as a single flex item — with
+    // align-items:center on the outer row, that vertically centers the
+    // checkbox against the combined height of both rows, instead of
+    // pinning it to row A's height only.
+    const stackedCol = document.createElement('div');
+    stackedCol.style.cssText = 'display:flex;flex-direction:column;flex:1;';
+    stackedCol.appendChild(fieldsRowA);
+    stackedCol.appendChild(fieldsRowB);
+
+    // align-self:center (on top of the row's own align-items:center)
+    // makes sure the checkbox is vertically centered against the full
+    // stacked-column height specifically, not just whatever the browser
+    // defaults a bare <input> to.
+    checkbox.style.cssText = 'flex:0 0 auto;align-self:center;margin:0;';
+
+    // flex-direction:row is set explicitly here (not just relying on
+    // the .admin-hole-row class) because a phone-width media query
+    // overrides that class to flex-direction:column, and an inline
+    // style only wins over a stylesheet rule property-by-property —
+    // omitting flex-direction from this inline style let that column
+    // override slip through, which is what stacked the checkbox above
+    // the fields instead of beside them.
+    row.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:0.5rem;width:100%;';
+    row.appendChild(checkbox);
+    row.appendChild(stackedCol);
+
+    if (!showSecondaryHoles) fieldsRowB.classList.add('hide');
 
     // Track this hole's hazard state (read/updated by the shared toolbar
     // checkboxes, not per-row inputs) so it survives regardless of
     // whether this row is currently visible/selected.
     adminHoleHazards[i] = (existingHole && existingHole.hazards) ? Object.assign({}, existingHole.hazards) : {};
 
-    row.appendChild(fieldsRow);
     container.appendChild(row);
   }
 }
@@ -708,11 +784,17 @@ async function saveAdminCourse() {
     const holeNumber = i + 1;
     const lengthInput = row.querySelector('[data-field="length"]');
     const parSelect = row.querySelector('[data-field="par"]');
+    const secondLengthInput = row.querySelector('[data-field="secondLength"]');
+    const secondParSelect = row.querySelector('[data-field="secondPar"]');
     const hole = {
       number: holeNumber,
       length: Number(lengthInput.value) || 0,
       par: Number(parSelect.value) || 3
     };
+    if (secondLengthInput && Number(secondLengthInput.value) > 0) {
+      hole.secondLength = Number(secondLengthInput.value);
+      hole.secondPar = Number(secondParSelect && secondParSelect.value) || hole.par;
+    }
     const hazards = {};
     const storedHazards = adminHoleHazards[holeNumber] || {};
     HAZARD_TYPES.forEach(type => {

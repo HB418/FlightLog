@@ -122,6 +122,22 @@ function generateHoleFieldsV2() {
     lengthInput.style.width = '5.5rem';
     lengthInput.style.flex = '0 0 auto';
 
+    // Optional — only meaningful once a 2nd tee is placed on the map
+    // for this hole (Match Lengths to Map fills it in from there), but
+    // left editable either way since a shorter set of tees is still a
+    // real, useful distance to record even before the map is finished.
+    // Par can differ for the 2nd tee too (e.g. a shorter layout might
+    // play as one stroke less), so it gets its own selector rather than
+    // assuming it always matches the main tee's par.
+    const secondLengthInput = document.createElement('input');
+    secondLengthInput.type = 'number';
+    secondLengthInput.min = '1';
+    secondLengthInput.placeholder = '2nd Tee (ft)';
+    secondLengthInput.dataset.hole = i;
+    secondLengthInput.dataset.field = 'secondLength';
+    secondLengthInput.style.width = '5.5rem';
+    secondLengthInput.style.flex = '0 0 auto';
+
     const parSelect = document.createElement('select');
     parSelect.dataset.hole = i;
     parSelect.dataset.field = 'par';
@@ -135,9 +151,24 @@ function generateHoleFieldsV2() {
       parSelect.appendChild(opt);
     }
 
+    const secondParSelect = document.createElement('select');
+    secondParSelect.dataset.hole = i;
+    secondParSelect.dataset.field = 'secondPar';
+    secondParSelect.style.width = '4.5rem';
+    secondParSelect.style.flex = '0 0 auto';
+    for (let p = 2; p <= 7; p++) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = 'Par ' + p;
+      if (p === 3) opt.selected = true;
+      secondParSelect.appendChild(opt);
+    }
+
     row.appendChild(label);
     row.appendChild(lengthInput);
     row.appendChild(parSelect);
+    row.appendChild(secondLengthInput);
+    row.appendChild(secondParSelect);
     container.appendChild(row);
   }
 }
@@ -829,6 +860,18 @@ function applyLengthsFromMap() {
     const feet = haversineFeet(geo.tee.lat, geo.tee.lng, geo.basket.lat, geo.basket.lng);
     const lengthInput = row.querySelector('[data-field="length"]');
     lengthInput.value = Math.round(feet);
+
+    // Same idea for a 2nd tee, when one's been placed — targets its
+    // own basket if it has one, otherwise the shared basket, matching
+    // whichever endpoint its dashed path is currently set to use.
+    if (geo.secondTee) {
+      const endBasket = (geo.secondPathTarget === 'primary') ? geo.basket : (geo.secondBasket || geo.basket);
+      if (endBasket) {
+        const secondFeet = haversineFeet(geo.secondTee.lat, geo.secondTee.lng, endBasket.lat, endBasket.lng);
+        const secondLengthInput = row.querySelector('[data-field="secondLength"]');
+        if (secondLengthInput) secondLengthInput.value = Math.round(secondFeet);
+      }
+    }
   });
 }
 
@@ -864,12 +907,18 @@ async function finishCourseCreation() {
   const holes = [];
   rows.forEach((row, i) => {
     const lengthInput = row.querySelector('[data-field="length"]');
+    const secondLengthInput = row.querySelector('[data-field="secondLength"]');
     const parSelect = row.querySelector('[data-field="par"]');
+    const secondParSelect = row.querySelector('[data-field="secondPar"]');
     const hole = {
       number: i + 1,
       length: Number(lengthInput.value) || 0,
       par: Number(parSelect.value) || 3
     };
+    if (secondLengthInput && Number(secondLengthInput.value) > 0) {
+      hole.secondLength = Number(secondLengthInput.value);
+      hole.secondPar = Number(secondParSelect && secondParSelect.value) || hole.par;
+    }
     const geo = pendingHoleGeo[i];
     if (geo) {
       if (geo.tee) hole.tee = geo.tee;

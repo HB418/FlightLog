@@ -586,13 +586,28 @@ function buildHoleTable(round, holesSubset, offset) {
   });
 
   const tfoot = table.createTFoot();
-  const footRow = tfoot.insertRow();
-  const footLabelCell = footRow.insertCell();
-  footLabelCell.textContent = 'Length / Par';
+
+  const mainFootRow = tfoot.insertRow();
+  const mainFootLabelCell = mainFootRow.insertCell();
+  mainFootLabelCell.textContent = 'Length / Par';
   holesSubset.forEach(h => {
-    const td = footRow.insertCell();
+    const td = mainFootRow.insertCell();
     td.textContent = h.length + 'ft / ' + h.par;
   });
+
+  // Second row only appears at all if at least one hole on the course
+  // has a 2nd-tee length recorded — holes without one just show a dash
+  // rather than the row vanishing per-hole (which would misalign the
+  // columns against the header row above it).
+  if (holesSubset.some(h => h.secondLength)) {
+    const secondFootRow = tfoot.insertRow();
+    const secondFootLabelCell = secondFootRow.insertCell();
+    secondFootLabelCell.textContent = '2nd Tee Length / Par';
+    holesSubset.forEach(h => {
+      const td = secondFootRow.insertCell();
+      td.textContent = h.secondLength ? (h.secondLength + 'ft / ' + (h.secondPar || h.par)) : '—';
+    });
+  }
 
   return table;
 }

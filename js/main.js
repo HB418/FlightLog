@@ -41,6 +41,18 @@ document.addEventListener('DOMContentLoaded', function () {
     renderAdminCourseList();
   });
   document.getElementById('admin-hole-count')?.addEventListener('change', () => generateAdminHoleFields());
+  document.getElementById('admin-secondary-holes-toggle')?.addEventListener('change', (e) => {
+    e.target.dataset.userSet = 'true';
+    // Just toggles visibility rather than regenerating the whole hole
+    // list, so it doesn't discard any length/par values already typed
+    // in but not yet saved.
+    document.querySelectorAll('#admin-holes-container .admin-hole-row-b').forEach(el => {
+      el.classList.toggle('hide', !e.target.checked);
+    });
+    document.querySelectorAll('#admin-holes-container .admin-hole-label[data-role="main"]').forEach(el => {
+      el.textContent = e.target.checked ? (el.dataset.holeNumber + 'A') : el.dataset.holeNumber;
+    });
+  });
   document.getElementById('admin-save-course-btn')?.addEventListener('click', saveAdminCourse);
   document.getElementById('admin-course-logo-input')?.addEventListener('change', handleAdminLogoFileSelected);
   document.getElementById('admin-remove-logo-btn')?.addEventListener('click', () => {
