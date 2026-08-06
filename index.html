@@ -771,18 +771,18 @@
   <script src="js/modals.js?v=2"></script>
   <script src="js/darkmode.js"></script>
   <script src="js/db.js?v=7"></script>
-  <script src="js/stock-courses.js?v=9"></script>
+  <script src="js/stock-courses.js?v=10"></script>
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=23"></script>
   <script src="js/weather.js?v=4"></script>
   <script src="js/course-wizard.js?v=13"></script>
   <script src="js/field-work.js?v=11"></script>
-  <script src="js/admin-panel.js?v=21"></script>
+  <script src="js/admin-panel.js?v=25"></script>
   <script src="js/round.js?v=13"></script>
   <script src="js/putt-practice.js?v=8"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=120"></script>
+  <script src="js/main.js?v=124"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 
@@ -1029,7 +1029,7 @@
               </select>
               <div class="admin-toolbar-sliders-col">
                 <div class="admin-toolbar-sliders-row">
-                  <label for="admin-rotation-slider" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>
+                  <label for="admin-rotation-slider" id="admin-rotation-slider-label" style="font-size:0.8rem;white-space:nowrap;">Tee facing:</label>
                   <input type="range" id="admin-rotation-slider" min="-180" max="180" value="0"/>
                 </div>
                 <div class="admin-toolbar-sliders-row">
@@ -1050,6 +1050,10 @@
                   <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-trees"/><span>Trees</span></label>
                   <label class="admin-hazard-checkbox"><input type="checkbox" id="admin-hazard-ob"/><span>Out of Bounds</span></label>
                 </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem;margin-left:auto;">
+                <button type="button" id="admin-save-progress-btn" class="paper-btn">Save Current Progress</button>
+                <button type="button" id="admin-undo-btn" class="paper-btn">Undo</button>
               </div>
             </div>
           </div>

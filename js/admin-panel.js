@@ -66,6 +66,8 @@ let adminArmedAction = null;       // { holeNumber, kind: 'tee'|'basket' } — n
 let adminSelectedHole = null;      // which hole's checkbox is currently checked — the shared toolbar acts on this hole
 let adminCourseLat = null;
 let adminCourseLng = null;
+let adminActiveRotationTarget = 'teeMarker'; // 'teeMarker' | 'secondTeeMarker' — which marker the facing slider currently controls, set by clicking a tee marker
+let adminUndoSnapshot = null; // { type, holeNumber, data } for the single most recent destructive Clear/Delete action — see handleAdminUndo()
 let adminNumbersLocked = false; // when true, hole-number labels move/scale as one with their marker instead of being independently draggable
 let adminRefImageScale = 1; // reference-overlay scale, controlled by mouse wheel while map is locked
 let adminRefImageOffsetX = 0; // reference-overlay position offset (px), controlled by dragging while locked
@@ -250,6 +252,7 @@ function openAdminEditor(course) {
   adminEditingCourseId = course ? course.id : null;
   adminHoleMarkers = {};
   adminArmedAction = null;
+  adminUndoSnapshot = null;
   adminEditingLogoDataUrl = course ? (course.logo || null) : null;
   const secondaryToggleEl = document.getElementById('admin-secondary-holes-toggle');
   if (secondaryToggleEl) delete secondaryToggleEl.dataset.userSet;
@@ -340,6 +343,7 @@ function openAdminEditor(course) {
           const m = L.marker([h.tee.lat, h.tee.lng], { icon: makeTeeDivIcon(h.tee.rotation || 0, scale), draggable: true }).addTo(adminMap);
           m._rotationDeg = h.tee.rotation || 0;
           m.on('drag', () => updateAdminLivePath(h.number));
+          m.on('click', () => setAdminActiveRotationTarget(h.number, 'teeMarker'));
           updateMarkerHoleLabel(m, [h.number], { baseOffset: h.tee.labelOffset });
           adminHoleMarkers[h.number].teeMarker = m;
         }
@@ -353,6 +357,7 @@ function openAdminEditor(course) {
           const m = L.marker([h.secondTee.lat, h.secondTee.lng], { icon: makeSecondTeeDivIcon(h.secondTee.rotation || 0, scale), draggable: true }).addTo(adminMap);
           m._rotationDeg = h.secondTee.rotation || 0;
           m.on('drag', () => updateAdminLivePath(h.number));
+          m.on('click', () => setAdminActiveRotationTarget(h.number, 'secondTeeMarker'));
           updateMarkerHoleLabel(m, [h.number + 'A'], { baseOffset: h.secondTee.labelOffset, isAlt: true });
           adminHoleMarkers[h.number].secondTeeMarker = m;
         }
@@ -383,11 +388,13 @@ function openAdminEditor(course) {
 // hole's checkbox was just checked/unchecked.
 function selectAdminHole(holeNumber) {
   adminSelectedHole = holeNumber;
+  adminActiveRotationTarget = 'teeMarker'; // reset to the main tee whenever the checked hole changes
   const label = document.getElementById('admin-selected-hole-label');
   const slider = document.getElementById('admin-rotation-slider');
   if (holeNumber == null) {
     label.textContent = 'No hole selected';
     slider.value = 0;
+    updateAdminRotationSliderLabel();
     HAZARD_TYPES.forEach(type => {
       document.getElementById('admin-hazard-' + type).checked = false;
     });
@@ -397,11 +404,31 @@ function selectAdminHole(holeNumber) {
   label.textContent = 'Hole ' + holeNumber + ' selected';
   const holeData = adminHoleMarkers[holeNumber];
   slider.value = String((holeData && holeData.teeMarker && holeData.teeMarker._rotationDeg) || 0);
+  updateAdminRotationSliderLabel();
   const hazards = adminHoleHazards[holeNumber] || {};
   HAZARD_TYPES.forEach(type => {
     document.getElementById('admin-hazard-' + type).checked = !!hazards[type];
   });
   updateAdminSecondPathTargetButton();
+}
+
+// Click a tee marker (main or 2nd) to make it the one the facing slider
+// controls — needed because a hole can have two tees now, and the
+// slider only ever drives one marker at a time.
+function setAdminActiveRotationTarget(holeNumber, targetKey) {
+  if (adminSelectedHole !== holeNumber) return; // only react for the currently-checked hole
+  adminActiveRotationTarget = targetKey;
+  const holeData = adminHoleMarkers[holeNumber];
+  const marker = holeData && holeData[targetKey];
+  const slider = document.getElementById('admin-rotation-slider');
+  if (slider) slider.value = String((marker && marker._rotationDeg) || 0);
+  updateAdminRotationSliderLabel();
+}
+
+function updateAdminRotationSliderLabel() {
+  const labelEl = document.getElementById('admin-rotation-slider-label');
+  if (!labelEl) return;
+  labelEl.textContent = (adminActiveRotationTarget === 'secondTeeMarker') ? '2nd tee facing:' : 'Tee facing:';
 }
 
 // The "Path to: ..." option only makes sense once the selected hole has
@@ -437,6 +464,21 @@ function deleteAdminSecondTee() {
   const holeData = adminHoleMarkers[adminSelectedHole];
   if (!holeData || !holeData.secondTeeMarker) return;
   showConfirmModal('Delete the 2nd tee for Hole ' + adminSelectedHole + '? This also removes its 2nd basket and waypoints, if any.', () => {
+    const teeLL = holeData.secondTeeMarker.getLatLng();
+    const snapshotData = { tee: { lat: teeLL.lat, lng: teeLL.lng, rotation: holeData.secondTeeMarker._rotationDeg || 0 } };
+    if (holeData.secondBasketMarker) {
+      const bLL = holeData.secondBasketMarker.getLatLng();
+      snapshotData.basket = { lat: bLL.lat, lng: bLL.lng };
+    }
+    if (holeData.secondWaypointMarkers && holeData.secondWaypointMarkers.length) {
+      snapshotData.waypoints = holeData.secondWaypointMarkers.map(m => {
+        const ll = m.getLatLng();
+        return { lat: ll.lat, lng: ll.lng };
+      });
+    }
+    snapshotData.secondPathTarget = holeData.secondPathTarget;
+    adminUndoSnapshot = { type: 'deleteSecondTee', holeNumber: adminSelectedHole, data: snapshotData };
+
     removeMarkerAndLabel(adminMap, holeData.secondTeeMarker);
     holeData.secondTeeMarker = null;
     if (holeData.secondBasketMarker) {
@@ -461,12 +503,67 @@ function deleteAdminSecondBasket() {
   const holeData = adminHoleMarkers[adminSelectedHole];
   if (!holeData || !holeData.secondBasketMarker) return;
   showConfirmModal('Delete the 2nd basket for Hole ' + adminSelectedHole + '?', () => {
+    const bLL = holeData.secondBasketMarker.getLatLng();
+    adminUndoSnapshot = { type: 'deleteSecondBasket', holeNumber: adminSelectedHole, data: { lat: bLL.lat, lng: bLL.lng } };
+
     removeMarkerAndLabel(adminMap, holeData.secondBasketMarker);
     holeData.secondBasketMarker = null;
     holeData.secondPathTarget = 'second';
     updateAdminLivePath(adminSelectedHole);
     updateAdminSecondPathTargetButton();
   });
+}
+
+// Reverses the single most recent Clear Waypoints/Clear 2nd Waypoints/
+// Delete 2nd Tee/Delete 2nd Basket action — the destructive ones that
+// can't just be fixed by dragging a marker back. Re-creates real
+// Leaflet markers from the snapshot, mirroring the same creation code
+// used when these are placed normally.
+function handleAdminUndo() {
+  if (!adminUndoSnapshot) {
+    showGenericModal('Nothing to undo.');
+    return;
+  }
+  const { type, holeNumber, data } = adminUndoSnapshot;
+  adminHoleMarkers[holeNumber] = adminHoleMarkers[holeNumber] || {};
+  const holeData = adminHoleMarkers[holeNumber];
+  const scale = scaleForZoom(adminMap);
+
+  if (type === 'clearWaypoints') {
+    holeData.waypointMarkers = data.map(w => createAdminWaypointMarker([w.lat, w.lng], holeNumber, false));
+
+  } else if (type === 'clearSecondWaypoints') {
+    holeData.secondWaypointMarkers = data.map(w => createAdminWaypointMarker([w.lat, w.lng], holeNumber, true));
+
+  } else if (type === 'deleteSecondTee') {
+    const m = L.marker([data.tee.lat, data.tee.lng], { icon: makeSecondTeeDivIcon(data.tee.rotation || 0, scale), draggable: true }).addTo(adminMap);
+    m._rotationDeg = data.tee.rotation || 0;
+    m.on('drag', () => updateAdminLivePath(holeNumber));
+    m.on('click', () => setAdminActiveRotationTarget(holeNumber, 'secondTeeMarker'));
+    updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
+    holeData.secondTeeMarker = m;
+
+    if (data.basket) {
+      const bm = L.marker([data.basket.lat, data.basket.lng], { icon: makeSecondBasketIcon(scale), draggable: true }).addTo(adminMap);
+      bm.on('drag', () => updateAdminLivePath(holeNumber));
+      updateMarkerHoleLabel(bm, [holeNumber + 'A'], { isAlt: true });
+      holeData.secondBasketMarker = bm;
+    }
+    if (data.waypoints && data.waypoints.length) {
+      holeData.secondWaypointMarkers = data.waypoints.map(w => createAdminWaypointMarker([w.lat, w.lng], holeNumber, true));
+    }
+    holeData.secondPathTarget = data.secondPathTarget || 'second';
+
+  } else if (type === 'deleteSecondBasket') {
+    const m = L.marker([data.lat, data.lng], { icon: makeSecondBasketIcon(scale), draggable: true }).addTo(adminMap);
+    m.on('drag', () => updateAdminLivePath(holeNumber));
+    updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
+    holeData.secondBasketMarker = m;
+  }
+
+  updateAdminLivePath(holeNumber);
+  if (adminSelectedHole === holeNumber) updateAdminSecondPathTargetButton();
+  adminUndoSnapshot = null;
 }
 
 function generateAdminHoleFields(course) {
@@ -680,9 +777,11 @@ function handleAdminMapClick(e) {
       const m = L.marker(e.latlng, { icon: makeTeeDivIcon(0, scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
       m._rotationDeg = 0;
       m.on('drag', () => updateAdminLivePath(holeNumber));
+      m.on('click', () => setAdminActiveRotationTarget(holeNumber, 'teeMarker'));
       updateMarkerHoleLabel(m, [holeNumber]);
       holeData.teeMarker = m;
     }
+    setAdminActiveRotationTarget(holeNumber, 'teeMarker');
   } else if (kind === 'basket') {
     if (holeData.basketMarker) {
       holeData.basketMarker.setLatLng(e.latlng);
@@ -699,9 +798,11 @@ function handleAdminMapClick(e) {
       const m = L.marker(e.latlng, { icon: makeSecondTeeDivIcon(0, scaleForZoom(adminMap)), draggable: true }).addTo(adminMap);
       m._rotationDeg = 0;
       m.on('drag', () => updateAdminLivePath(holeNumber));
+      m.on('click', () => setAdminActiveRotationTarget(holeNumber, 'secondTeeMarker'));
       updateMarkerHoleLabel(m, [holeNumber + 'A'], { isAlt: true });
       holeData.secondTeeMarker = m;
     }
+    setAdminActiveRotationTarget(holeNumber, 'secondTeeMarker');
   } else if (kind === 'secondBasket') {
     if (holeData.secondBasketMarker) {
       holeData.secondBasketMarker.setLatLng(e.latlng);
@@ -772,12 +873,11 @@ function getLabelBaseOffset(marker) {
   return (marker && marker._holeLabelMarker && marker._holeLabelMarker._baseOffsetPx) || null;
 }
 
-async function saveAdminCourse() {
-  const name = document.getElementById('admin-course-name').value.trim();
-  if (!name) { showGenericModal('Please enter a course name.'); return; }
-  const location = document.getElementById('admin-course-location').value.trim();
-  const address = document.getElementById('admin-course-address').value.trim();
-
+// Builds the holes array from the current DOM inputs + live map markers
+// — the shared source of truth for saving (persistAdminCourseData),
+// and for exporting a course to become a permanent stock course
+// (exportAdminCourseToStock).
+function buildAdminHolesArray() {
   const rows = document.querySelectorAll('#admin-holes-container .admin-hole-row');
   const holes = [];
   rows.forEach((row, i) => {
@@ -844,6 +944,19 @@ async function saveAdminCourse() {
     }
     holes.push(hole);
   });
+  return holes;
+}
+
+// Builds the holes array from the DOM/markers and writes it to the DB —
+// shared by the "Save" button (which then navigates away) and "Save
+// Current Progress" (which doesn't). Returns false (and shows a message)
+// if the course name is missing, true on success.
+async function persistAdminCourseData() {
+  const name = document.getElementById('admin-course-name').value.trim();
+  if (!name) { showGenericModal('Please enter a course name.'); return false; }
+  const location = document.getElementById('admin-course-location').value.trim();
+  const address = document.getElementById('admin-course-address').value.trim();
+  const holes = buildAdminHolesArray();
 
   const db = await openDiscTallyDB();
 
@@ -863,8 +976,17 @@ async function saveAdminCourse() {
       courseRecord.lat = adminCourseLat;
       courseRecord.lng = adminCourseLng;
     }
-    await addCourse(db, courseRecord);
+    // Capture the new ID so a subsequent Save/Save Progress on this
+    // same course UPDATEs it instead of creating a duplicate entry.
+    adminEditingCourseId = await addCourse(db, courseRecord);
   }
+
+  return true;
+}
+
+async function saveAdminCourse() {
+  const ok = await persistAdminCourseData();
+  if (!ok) return;
 
   document.getElementById('admin-editor-screen').classList.add('hide');
   document.getElementById('admin-list-screen').classList.remove('hide');
@@ -874,4 +996,52 @@ async function saveAdminCourse() {
   adminHoleMarkers = {};
   renderAdminCourseList();
   await loadCourseOptions();
+}
+
+// Same underlying save as the "Save" button, but stays on the editor
+// screen and keeps the map/markers alive — a safety net against an
+// accidental window close mid-edit, not an exit action.
+async function saveAdminCourseProgress() {
+  const ok = await persistAdminCourseData();
+  if (!ok) return;
+  showGenericModal('Progress saved.');
+}
+
+// "Permanent" stock courses ship inside stock-courses.js itself so
+// they're available on any fresh install with no admin setup needed —
+// but the running web app has no way to edit its own source files (no
+// backend to write through). So this can't add the course to stock by
+// itself; it exports the course as a downloaded JSON file in the exact
+// shape stock-courses.js expects, which then just needs to be spliced
+// into that file's STOCK_COURSES array by hand.
+function exportAdminCourseToStock() {
+  const name = document.getElementById('admin-course-name').value.trim();
+  if (!name) { showGenericModal('Please enter a course name.'); return; }
+  const location = document.getElementById('admin-course-location').value.trim();
+  const address = document.getElementById('admin-course-address').value.trim();
+  const holes = buildAdminHolesArray();
+
+  const stockKey = name.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'course';
+
+  const stockCourse = { stockKey, name, address, location, source: 'admin' };
+  if (adminCourseLat != null) stockCourse.lat = adminCourseLat;
+  if (adminCourseLng != null) stockCourse.lng = adminCourseLng;
+  stockCourse.holes = holes;
+  if (adminEditingLogoDataUrl) {
+    stockCourse._logoNote = 'This course has a logo set in the editor, but it was uploaded as image data, not a file path — stock course logos need a real file in img/ (see the header comment in stock-courses.js), so this needs to be added separately rather than copied in as-is.';
+  }
+
+  const blob = new Blob([JSON.stringify(stockCourse, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'stock-course-' + stockKey + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showGenericModal('Downloaded stock-course-' + stockKey + '.json — send it over (or say where it landed) and it can be added to the permanent stock course list.');
 }

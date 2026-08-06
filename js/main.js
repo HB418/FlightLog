@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
   document.getElementById('admin-save-course-btn')?.addEventListener('click', saveAdminCourse);
+  document.getElementById('admin-save-progress-btn')?.addEventListener('click', saveAdminCourseProgress);
+  document.getElementById('admin-undo-btn')?.addEventListener('click', handleAdminUndo);
+  document.getElementById('admin-save-to-stock-btn')?.addEventListener('click', exportAdminCourseToStock);
   document.getElementById('admin-course-logo-input')?.addEventListener('change', handleAdminLogoFileSelected);
   document.getElementById('admin-remove-logo-btn')?.addEventListener('click', () => {
     adminEditingLogoDataUrl = null;
@@ -210,7 +213,12 @@ document.addEventListener('DOMContentLoaded', function () {
       showGenericModal('Click the map to add a waypoint for Hole ' + adminSelectedHole + '. Click an existing waypoint dot to remove it.');
 
     } else if (action === 'clearWaypoints') {
-      if (holeData && holeData.waypointMarkers) {
+      if (holeData && holeData.waypointMarkers && holeData.waypointMarkers.length) {
+        adminUndoSnapshot = {
+          type: 'clearWaypoints',
+          holeNumber: adminSelectedHole,
+          data: holeData.waypointMarkers.map(m => { const ll = m.getLatLng(); return { lat: ll.lat, lng: ll.lng }; })
+        };
         holeData.waypointMarkers.forEach(m => adminMap.removeLayer(m));
         holeData.waypointMarkers = [];
       }
@@ -225,7 +233,12 @@ document.addEventListener('DOMContentLoaded', function () {
       showGenericModal('Click the map to add a waypoint for the 2nd tee\'s path on Hole ' + adminSelectedHole + '. Click an existing waypoint dot to remove it.');
 
     } else if (action === 'clearSecondWaypoints') {
-      if (holeData && holeData.secondWaypointMarkers) {
+      if (holeData && holeData.secondWaypointMarkers && holeData.secondWaypointMarkers.length) {
+        adminUndoSnapshot = {
+          type: 'clearSecondWaypoints',
+          holeNumber: adminSelectedHole,
+          data: holeData.secondWaypointMarkers.map(m => { const ll = m.getLatLng(); return { lat: ll.lat, lng: ll.lng }; })
+        };
         holeData.secondWaypointMarkers.forEach(m => adminMap.removeLayer(m));
         holeData.secondWaypointMarkers = [];
       }
@@ -258,13 +271,15 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     const holeData = adminHoleMarkers[adminSelectedHole];
-    if (!holeData || !holeData.teeMarker) {
-      console.warn('Tee facing slider: Hole ' + adminSelectedHole + ' has no tee marker placed yet.');
+    const targetKey = adminActiveRotationTarget || 'teeMarker';
+    const marker = holeData && holeData[targetKey];
+    if (!marker) {
+      console.warn('Tee facing slider: Hole ' + adminSelectedHole + ' has no ' + targetKey + ' marker placed yet.');
       return;
     }
     const deg = Number(e.target.value);
-    holeData.teeMarker._rotationDeg = deg;
-    const el = holeData.teeMarker.getElement();
+    marker._rotationDeg = deg;
+    const el = marker.getElement();
     if (!el) {
       console.warn('Tee facing slider: marker.getElement() returned null.');
       return;
