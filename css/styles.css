@@ -1123,6 +1123,56 @@ body.dark-mode .hole-record-box {
 .map-popup-overlay-bar.bottom {
   bottom: 0;
 }
+/* As You Play's bottom overlay controls — a consistent field/checkbox
+   look instead of raw unstyled browser inputs, matching the same
+   white-pill treatment used for the disc-picker select elsewhere. */
+.ayp-field-row {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.ayp-field {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  color: #fff;
+}
+.ayp-field input,
+.ayp-field select {
+  background: rgba(255, 255, 255, 0.92);
+  color: #222;
+  border: none;
+  border-radius: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  width: 5rem;
+  text-align: center;
+}
+.ayp-check-row {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.ayp-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #fff;
+}
+.ayp-check input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #038C7F;
+}
 /* Small button row inside the top overlay bar — e.g. the 2nd-tee/2nd-basket
    delete controls — flexed and centered under the instructions text. */
 .map-popup-inline-btn-row {

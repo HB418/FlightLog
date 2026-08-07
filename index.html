@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=92"/>
+  <link rel="stylesheet" href="css/styles.css?v=93"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -657,34 +657,34 @@
 
   <div id="ayp-controls" class="map-popup-overlay-bar bottom">
     <p id="ayp-instructions" style="font-size:0.85rem;margin:0 0 0.4rem;text-align:center;"></p>
-    <div style="display:flex;gap:0.6rem;justify-content:center;align-items:center;flex-wrap:wrap;">
-      <label style="font-size:0.85rem;">Length (ft) <input type="number" id="ayp-hole-length-input" min="1" style="width:4.5rem;"/></label>
-      <select id="ayp-hole-par-select" style="width:5rem;">
-        <option value="2">Par 2</option>
-        <option value="3" selected>Par 3</option>
-        <option value="4">Par 4</option>
-        <option value="5">Par 5</option>
-        <option value="6">Par 6</option>
-        <option value="7">Par 7</option>
-      </select>
+    <div class="ayp-field-row">
+      <label class="ayp-field">Length (ft)<input type="number" id="ayp-hole-length-input" min="1"/></label>
+      <label class="ayp-field">Par
+        <select id="ayp-hole-par-select">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+        </select>
+      </label>
     </div>
-    <div style="text-align:center;margin-top:0.3rem;">
-      <label style="font-size:0.8rem;"><input type="checkbox" id="ayp-unknown-length-checkbox"/> Don't know hole length</label>
+    <div class="ayp-check-row">
+      <label class="ayp-check"><input type="checkbox" id="ayp-unknown-length-checkbox"/> Don't know hole length</label>
     </div>
-    <div style="display:flex;gap:0.7rem;justify-content:center;flex-wrap:wrap;margin-top:0.4rem;font-size:0.8rem;">
-      <label><input type="checkbox" id="ayp-hazard-water"/> Water</label>
-      <label><input type="checkbox" id="ayp-hazard-trees"/> Trees</label>
-      <label><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
-      <label><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
+    <div class="ayp-check-row">
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-water"/> Water</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-trees"/> Trees</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
     </div>
     <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
       <button id="ayp-mark-tee-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Mark Tee</button>
       <button id="ayp-mark-basket-btn" type="button" class="paper-btn hide" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Mark Basket</button>
     </div>
-    <div id="ayp-score-row" class="hide" style="text-align:center;margin-top:0.5rem;">
-      <label style="font-size:0.85rem;">Your score
-        <input type="number" id="ayp-score-input" min="1" step="1" style="width:4rem;"/>
-      </label>
+    <div id="ayp-score-row" class="hide ayp-field-row">
+      <label class="ayp-field">Your score<input type="number" id="ayp-score-input" min="1" step="1"/></label>
       <button id="ayp-submit-score-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;margin-left:0.4rem;">Submit</button>
     </div>
   </div>
