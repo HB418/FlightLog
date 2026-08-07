@@ -183,6 +183,27 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    // Permanent test account — "test"/"test" always works on any
+    // install with zero setup, same principle as the admin check above
+    // (a hardcoded credential match baked into the shipped code, not
+    // data that needs seeding). Logs in as a real, ordinary regular
+    // account (not an admin-style bypass) — signing in this way DOES
+    // overwrite whatever regular profile already exists on this
+    // device, same as any other account switch would.
+    if (email.trim().toLowerCase() === 'test' && password === 'test') {
+      localStorage.setItem('userName', 'Test');
+      localStorage.setItem('userState', 'NH');
+      localStorage.setItem('userEmail', 'test');
+      localStorage.setItem('userPasswordHash', await hashPassword('test'));
+      localStorage.setItem('userAutoLogin', remember ? 'true' : 'false');
+      document.getElementById('signin-email-input').value = '';
+      document.getElementById('signin-password-input').value = '';
+      statusEl.textContent = '';
+      signinModal.classList.remove('active');
+      refreshAccountFieldsFromStorage();
+      return;
+    }
+
     const storedEmail = localStorage.getItem('userEmail') || '';
     const storedHash = localStorage.getItem('userPasswordHash') || '';
     const enteredHash = await hashPassword(password);

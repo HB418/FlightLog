@@ -338,9 +338,11 @@
 
       <div class="map-popup-overlay-bar top">
         <p id="fw-map-instructions" style="font-size:0.9rem;text-align:center;margin:0;"></p>
-        <div id="fw-map-weather" style="margin-top:0.4rem;display:flex;justify-content:center;"></div>
-        <div id="fw-disc-picker-row" class="map-popup-inline-btn-row hide" style="margin-top:0.4rem;">
-          <select id="fw-active-disc-select" style="max-width:100%;"></select>
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;flex-wrap:wrap;margin-top:0.4rem;">
+          <div id="fw-map-weather"></div>
+          <div id="fw-disc-picker-row" class="map-popup-inline-btn-row hide">
+            <select id="fw-active-disc-select" style="max-width:100%;"></select>
+          </div>
         </div>
         <div id="fw-arrow-adjust-row" class="hide" style="margin-top:0.5rem;">
           <label for="fw-arrow-rotation" style="font-size:0.8rem;">Adjust direction</label>
@@ -353,10 +355,12 @@
         <div id="fw-results-block" class="hide" style="margin-top:0.5rem;font-size:0.85rem;text-align:center;"></div>
       </div>
 
-      <button id="fw-map-back-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left">Back</button>
-      <button id="fw-map-finish-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-left-upper">Finish Practice</button>
-      <button id="fw-map-mark-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right">Mark</button>
-      <button id="fw-map-save-btn" type="button" class="paper-btn map-popup-btn map-popup-btn-right hide">Save</button>
+      <div class="map-popup-overlay-bar bottom" style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;">
+        <button id="fw-map-back-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Back</button>
+        <button id="fw-map-finish-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Finish Practice</button>
+        <button id="fw-map-mark-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Mark</button>
+        <button id="fw-map-save-btn" type="button" class="paper-btn hide" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Save</button>
+      </div>
     </div>
   </div>
 
@@ -838,14 +842,14 @@
   <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
   <script src="js/course-wizard.js?v=15"></script>
-  <script src="js/field-work.js?v=11"></script>
+  <script src="js/field-work.js?v=17"></script>
   <script src="js/admin-panel.js?v=25"></script>
   <script src="js/round.js?v=15"></script>
   <script src="js/putt-practice.js?v=9"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
   <script src="js/main.js?v=126"></script>
-  <script src="js/namePrompt.js?v=10"></script>
+  <script src="js/namePrompt.js?v=11"></script>
 
 
 </div>

@@ -482,16 +482,56 @@ function openFieldWorkMapScreen() {
         L.DomEvent.disableScrollPropagation(el);
       });
   } else if (fieldWorkMap) {
-    // Reused map instance from an earlier session in this same page load — clear old markers.
+    // Reused map instance from an earlier session in this same page load — clear old markers/lines.
     fieldWorkMap.eachLayer(layer => {
-      if (layer instanceof L.Marker) fieldWorkMap.removeLayer(layer);
+      if (layer instanceof L.Marker || layer instanceof L.Polyline) fieldWorkMap.removeLayer(layer);
     });
   }
+
+  // Center on the tee first, then pan in screen-pixel space (not geo
+  // space) to push it toward the bottom of the frame — pixel panning
+  // is always straight down on screen regardless of which way the tee
+  // is facing, unlike offsetting the geo center along its bearing,
+  // which only landed bottom-center for a due-north tee and drifted
+  // sideways for any other facing direction.
+  const teeRotation = tee.rotation || 0;
   fieldWorkMap.setView(center, 19);
-  setTimeout(() => fieldWorkMap.invalidateSize(), 50);
+  setTimeout(() => {
+    fieldWorkMap.invalidateSize();
+    // The pan needs to happen in the PRE-rotation pixel space, since
+    // the CSS rotation applied below rotates this offset along with
+    // everything else — without pre-rotating the offset vector itself
+    // to compensate, the shift ends up pointing some other direction
+    // once the outer rotation is applied instead of staying "down".
+    const y = fieldWorkMap.getSize().y * 0.22;
+    const rad = teeRotation * Math.PI / 180;
+    const dx = y * Math.sin(rad);
+    const dy = -y * Math.cos(rad);
+    fieldWorkMap.panBy([dx, dy], { animate: false });
+  }, 50);
+
+  // Rotate the whole map container so the tee's facing direction reads
+  // as straight up on screen instead of true north — this is what
+  // actually makes the sight line vertical. The tee icon's own internal
+  // rotation cancels out against this container rotation and ends up
+  // pointing up too, which is correct. Trade-off: manual drag-panning
+  // on this screen will feel off since Leaflet's own drag math doesn't
+  // know about this extra CSS rotation — acceptable here since this
+  // screen is GPS-mark-driven, not something you pan around by hand.
+  // Scale is sqrt(2) (the minimum needed for a rotated rectangle to
+  // still fully cover its own bounding box at any angle) plus a small
+  // margin — 1.6 was noticeably more zoomed-in than actually necessary.
+  const mapEl = document.getElementById('field-work-map');
+  mapEl.style.transform = 'rotate(' + (-teeRotation) + 'deg) scale(1.45)';
+  mapEl.style.transformOrigin = 'center center';
 
   const scale = scaleForZoom(fieldWorkMap);
-  L.marker(center, { icon: makeTeeDivIcon(tee.rotation || 0, scale) }).addTo(fieldWorkMap);
+  L.marker(center, { icon: makeTeeDivIcon(teeRotation, scale) }).addTo(fieldWorkMap);
+
+  // Dotted sight line in the tee's facing direction — a visual aim
+  // reference, long enough to run off the edge of the visible map.
+  const sightEnd = destinationPoint(tee.lat, tee.lng, teeRotation, 400);
+  L.polyline([center, [sightEnd.lat, sightEnd.lng]], { color: '#fff', weight: 2, opacity: 0.85, dashArray: '6,8' }).addTo(fieldWorkMap);
 
   fwCurrentStep = 'mark-disc1';
   updateFieldWorkMapUI();
