@@ -37,8 +37,17 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('ayp-info-modal').classList.remove('active');
   });
   document.getElementById('ayp-close-btn')?.addEventListener('click', handleAypClose);
+  document.getElementById('ayp-mark-tee-btn')?.addEventListener('click', handleAypMarkTee);
+  document.getElementById('ayp-mark-basket-btn')?.addEventListener('click', handleAypMarkBasket);
+  document.getElementById('ayp-submit-score-btn')?.addEventListener('click', handleAypSubmitScore);
+  document.getElementById('ayp-hole-complete-next-btn')?.addEventListener('click', handleAypHoleCompleteNext);
   document.getElementById('ayp-finish-btn')?.addEventListener('click', () => {
-    showGenericModal('Finish Course is coming in a later part.');
+    if (aypHoles.length === 0) {
+      showGenericModal('Mark and score at least one hole before finishing.');
+      return;
+    }
+    savingFlowIsAyp = true;
+    document.getElementById('save-visibility-modal').classList.add('active');
   });
   document.getElementById('ayp-course-address')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleAypInfoNext();
@@ -457,12 +466,12 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('save-visibility-private-btn')?.addEventListener('click', () => {
     pendingCourseVisibility = 'private';
     document.getElementById('save-visibility-modal').classList.remove('active');
-    finishCourseCreation();
+    if (savingFlowIsAyp) { finishAsYouPlayCourse(); } else { finishCourseCreation(); }
   });
   document.getElementById('save-visibility-public-btn')?.addEventListener('click', () => {
     pendingCourseVisibility = 'public';
     document.getElementById('save-visibility-modal').classList.remove('active');
-    finishCourseCreation();
+    if (savingFlowIsAyp) { finishAsYouPlayCourse(); } else { finishCourseCreation(); }
   });
   document.getElementById('save-visibility-back-btn')?.addEventListener('click', () => {
     document.getElementById('save-visibility-modal').classList.remove('active');

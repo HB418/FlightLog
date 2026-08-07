@@ -37,6 +37,14 @@ let pendingAypLat = null;
 let pendingAypLng = null;
 let aypMap = null;
 let aypMapLocationTracker = null;
+let aypCurrentHoleNumber = 1;
+let aypHoles = []; // completed holes so far: {number, length, par, hazards, tee, basket}
+let aypTeeMarker = null;
+let aypBasketMarker = null;
+let aypTeeLatLng = null;
+let aypBasketLatLng = null;
+let aypScores = []; // strokes per completed hole, parallel to aypHoles
+let savingFlowIsAyp = false; // which Finish flow the shared save-visibility-modal should call back into
 
 /* ---------- New Course modal (3-screen wizard) ---------- */
 
@@ -98,8 +106,11 @@ async function handleAypInfoNext() {
 }
 
 function launchAsYouPlayScreen() {
-  document.getElementById('ayp-hole-label').textContent = 'As You Play — ' + pendingAypName;
   document.getElementById('as-you-play-screen').classList.add('active');
+
+  aypCurrentHoleNumber = 1;
+  aypHoles = [];
+  aypScores = [];
 
   const center = [pendingAypLat, pendingAypLng];
 
@@ -124,9 +135,100 @@ function launchAsYouPlayScreen() {
   aypMap.setView(center, 18);
   setTimeout(() => aypMap.invalidateSize(), 50);
 
-  // Hole controls (length/par, hazards, Mark Tee/Basket, scoring) are
-  // built in the next part — this segment just gets the map open and
-  // centered on the right spot.
+  resetAypHoleControls();
+}
+
+function resetAypHoleControls() {
+  document.getElementById('ayp-hole-label').textContent = pendingAypName + ' — Hole ' + aypCurrentHoleNumber;
+  document.getElementById('ayp-instructions').textContent = 'Enter length/par if known, then walk to the tee and press Mark Tee.';
+  document.getElementById('ayp-hole-length-input').value = '';
+  document.getElementById('ayp-hole-par-select').value = '3';
+  document.getElementById('ayp-unknown-length-checkbox').checked = false;
+  document.getElementById('ayp-hazard-water').checked = false;
+  document.getElementById('ayp-hazard-trees').checked = false;
+  document.getElementById('ayp-hazard-dogleg').checked = false;
+  document.getElementById('ayp-hazard-ob').checked = false;
+  document.getElementById('ayp-mark-tee-btn').classList.remove('hide');
+  document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+  document.getElementById('ayp-score-row').classList.add('hide');
+  document.getElementById('ayp-score-input').value = '';
+  aypTeeLatLng = null;
+  aypBasketLatLng = null;
+}
+
+function handleAypMarkTee() {
+  document.getElementById('ayp-instructions').textContent = 'Getting an accurate GPS reading…';
+  captureAccurateGpsPosition((pos) => {
+    if (!pos) { document.getElementById('ayp-instructions').textContent = 'Enter length/par if known, then walk to the tee and press Mark Tee.'; return; }
+    aypTeeLatLng = pos;
+    const scale = scaleForZoom(aypMap);
+    if (aypTeeMarker) aypMap.removeLayer(aypTeeMarker);
+    aypTeeMarker = L.marker([pos.lat, pos.lng], { icon: makeTeeDivIcon(0, scale) }).addTo(aypMap);
+    document.getElementById('ayp-mark-tee-btn').classList.add('hide');
+    document.getElementById('ayp-mark-basket-btn').classList.remove('hide');
+    document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.';
+  });
+}
+
+function handleAypMarkBasket() {
+  document.getElementById('ayp-instructions').textContent = 'Getting an accurate GPS reading…';
+  captureAccurateGpsPosition((pos) => {
+    if (!pos) { document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.'; return; }
+    aypBasketLatLng = pos;
+    const scale = scaleForZoom(aypMap);
+    if (aypBasketMarker) aypMap.removeLayer(aypBasketMarker);
+    aypBasketMarker = L.marker([pos.lat, pos.lng], { icon: makeBasketIcon(scale) }).addTo(aypMap);
+
+    const unknownLength = document.getElementById('ayp-unknown-length-checkbox').checked;
+    if (unknownLength && aypTeeLatLng) {
+      const feet = haversineFeet(aypTeeLatLng.lat, aypTeeLatLng.lng, pos.lat, pos.lng);
+      document.getElementById('ayp-hole-length-input').value = Math.round(feet);
+    }
+
+    document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+    document.getElementById('ayp-score-row').classList.remove('hide');
+    document.getElementById('ayp-instructions').textContent = 'Enter your score for this hole.';
+  });
+}
+
+function handleAypSubmitScore() {
+  const strokes = parseInt(document.getElementById('ayp-score-input').value, 10);
+  if (!Number.isFinite(strokes) || strokes < 1) {
+    document.getElementById('ayp-instructions').textContent = 'Enter a valid score for this hole.';
+    return;
+  }
+
+  const hole = {
+    number: aypCurrentHoleNumber,
+    length: Number(document.getElementById('ayp-hole-length-input').value) || 0,
+    par: Number(document.getElementById('ayp-hole-par-select').value) || 3,
+    tee: aypTeeLatLng,
+    basket: aypBasketLatLng
+  };
+  const hazards = {};
+  if (document.getElementById('ayp-hazard-water').checked) hazards.water = true;
+  if (document.getElementById('ayp-hazard-trees').checked) hazards.trees = true;
+  if (document.getElementById('ayp-hazard-dogleg').checked) hazards.dogleg = true;
+  if (document.getElementById('ayp-hazard-ob').checked) hazards.ob = true;
+  if (Object.keys(hazards).length) hole.hazards = hazards;
+
+  aypHoles.push(hole);
+  aypScores.push(strokes);
+
+  const totalStrokes = aypScores.reduce((s, v) => s + v, 0);
+  const totalPar = aypHoles.reduce((s, h) => s + h.par, 0);
+  const diff = totalStrokes - totalPar;
+  const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
+
+  document.getElementById('ayp-hole-complete-summary').textContent =
+    'Hole ' + hole.number + ': ' + strokes + ' strokes. Running total: ' + totalStrokes + ' (' + diffText + ')';
+  document.getElementById('ayp-hole-complete-modal').classList.add('active');
+}
+
+function handleAypHoleCompleteNext() {
+  document.getElementById('ayp-hole-complete-modal').classList.remove('active');
+  aypCurrentHoleNumber++;
+  resetAypHoleControls();
 }
 
 function handleAypClose() {
@@ -137,6 +239,60 @@ function handleAypClose() {
     aypMap.remove();
     aypMap = null;
   }
+}
+
+// Saves both the course itself (from aypHoles, already in the right
+// shape) AND the round just played while building it, since the user
+// confirmed they want their As You Play scores to count as a real
+// round in Stats. Publishing here only sets local visibility, same as
+// every other course save in the app — there's no backend yet to
+// actually post it anywhere for review, so "Make Public" isn't trying
+// to fake that.
+async function finishAsYouPlayCourse() {
+  const db = await openDiscTallyDB();
+
+  const courseRecord = {
+    name: pendingAypName,
+    location: pendingAypLocation,
+    address: pendingAypAddress,
+    holes: aypHoles,
+    source: 'user',
+    visibility: pendingCourseVisibility
+  };
+  if (pendingAypLat != null && pendingAypLng != null) {
+    courseRecord.lat = pendingAypLat;
+    courseRecord.lng = pendingAypLng;
+  }
+  const courseId = await addCourse(db, courseRecord);
+
+  const playerName = localStorage.getItem('userName') || 'Player 1';
+  const totalPar = aypHoles.reduce((s, h) => s + (Number(h.par) || 0), 0);
+  const total = aypScores.reduce((s, v) => s + v, 0);
+  const courseForRating = { holes: aypHoles };
+  const roundRating = computeRoundRating(courseForRating, total);
+  const scoresList = aypHoles.map((h, i) => ({ hole: h.number, strokes: aypScores[i] }));
+
+  const roundRecord = {
+    courseId: courseId,
+    courseName: pendingAypName,
+    date: new Date().toISOString(),
+    totalPar: totalPar,
+    weather: null,
+    holes: aypHoles.map(h => ({ number: h.number, par: h.par })),
+    players: [{ name: playerName, total: total, roundRating: roundRating, scores: scoresList }]
+  };
+  await addRound(db, roundRecord);
+  await recomputeFlightRating();
+
+  handleAypClose();
+  await loadCourseOptions();
+
+  const diff = total - totalPar;
+  const diffText = diff === 0 ? 'Even' : (diff > 0 ? '+' + diff : String(diff));
+  showGenericModal(
+    'Course "' + pendingAypName + '" saved (' + pendingCourseVisibility + ') with ' + aypHoles.length +
+    ' hole(s). Your round is saved to Stats: ' + total + ' (' + diffText + ').'
+  );
 }
 
 function showNCScreen(id) {
@@ -998,6 +1154,7 @@ function applyMapFromLengths() {
 }
 
 function promptSaveOrBack() {
+  savingFlowIsAyp = false;
   document.getElementById('save-visibility-modal').classList.add('active');
 }
 
