@@ -153,20 +153,27 @@ body.dark-mode #admin-panel {
   inset: 0;
   z-index: 3000;
   background: #fff;
-  padding: 0.5rem 1.5rem;
-  flex-direction: column;
 }
 #putt-practice-screen.active {
-  display: flex;
+  display: block;
 }
 body.dark-mode #putt-practice-screen {
   background: #2C2C2C;
   color: #E0E0E0;
 }
-#putt-practice-map {
-  flex: 1 1 auto;
-  min-height: 0;
-  border-radius: 0.4rem;
+#as-you-play-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #fff;
+}
+#as-you-play-screen.active {
+  display: block;
+}
+body.dark-mode #as-you-play-screen {
+  background: #2C2C2C;
+  color: #E0E0E0;
 }
 .admin-panel-header {
   display: flex;
@@ -1112,6 +1119,9 @@ body.dark-mode .hole-record-box {
 }
 .map-popup-overlay-bar.top {
   top: 0;
+}
+.map-popup-overlay-bar.bottom {
+  bottom: 0;
 }
 /* Small button row inside the top overlay bar — e.g. the 2nd-tee/2nd-basket
    delete controls — flexed and centered under the instructions text. */

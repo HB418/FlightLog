@@ -166,6 +166,15 @@ function rescaleIconMarkers(map, registry) {
     forceReenableDragging(entry.marker);
     rescaleHoleLabel(entry.marker, map);
   });
+  // Same reason as updateCurrentHoleStyling() in round.js: setIcon()
+  // above replaced every marker's DOM element, which silently undoes
+  // any display:none the Main/2nd Tees visibility checkboxes had
+  // applied. This function is also used by the Admin panel and Field
+  // Work maps, which don't have that toggle at all, so it's guarded
+  // to a no-op there rather than assuming it always exists.
+  if (typeof applyTeeVisibilityToRegistry === 'function') {
+    applyTeeVisibilityToRegistry(registry);
+  }
 }
 
 // Updates a marker's attached draggable hole-number label (if any) to

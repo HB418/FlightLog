@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=90"/>
+  <link rel="stylesheet" href="css/styles.css?v=92"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -64,6 +64,10 @@
     <div class="col">
       <img id="header-image" src="img/flightLogHeader.png" alt="Flight Log"/>
       <div id="header-map" class="hide"></div>
+      <div id="header-map-tee-toggles" class="hide" style="display:flex;gap:1rem;justify-content:center;padding:0.3rem 0;font-size:0.85rem;">
+        <label style="display:inline-flex;align-items:center;gap:0.3rem;margin:0;"><input type="checkbox" id="header-map-main-tees-toggle" checked/> Main Tees</label>
+        <label style="display:inline-flex;align-items:center;gap:0.3rem;margin:0;"><input type="checkbox" id="header-map-second-tees-toggle" checked/> 2nd Tees</label>
+      </div>
     </div>
   </header>
 
@@ -74,6 +78,39 @@
     <div class="custom-modal-content">
       <p id="generic-modal-message"></p>
       <button id="generic-modal-ok" class="paper-btn">OK</button>
+    </div>
+  </div>
+
+  <!-- New Course: All at Once vs As You Play -->
+  <div id="new-course-mode-choice-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:420px;">
+      <h4>New Course</h4>
+      <p>How would you like to build this course?</p>
+      <div style="display:flex;gap:0.6rem;justify-content:center;margin-top:1rem;flex-wrap:wrap;">
+        <button id="nc-mode-all-at-once-btn" class="paper-btn">All at Once</button>
+        <button id="nc-mode-as-you-play-btn" class="paper-btn">As You Play</button>
+      </div>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="nc-mode-choice-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- As You Play: course name/address (no hole count — open-ended) -->
+  <div id="ayp-info-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
+      <h4 style="text-align:center;">New Course — As You Play</h4>
+      <label for="ayp-course-name">Course Name</label>
+      <input type="text" id="ayp-course-name" placeholder="Course name" style="width:100%;margin-bottom:0.75rem;"/>
+      <label for="ayp-course-address">Address</label>
+      <input type="text" id="ayp-course-address" placeholder="Street address" style="width:100%;margin-bottom:0.75rem;"/>
+      <label for="ayp-course-location">Location</label>
+      <input type="text" id="ayp-course-location" placeholder="City, State" style="width:100%;margin-bottom:0.75rem;"/>
+      <p id="ayp-info-status" style="font-size:0.8rem;opacity:0.8;min-height:1.1rem;"></p>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="ayp-info-next-btn" class="paper-btn">Next</button>
+        <button id="ayp-info-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -386,6 +423,10 @@
   <div id="map-zoom-modal" class="custom-modal">
     <div class="custom-modal-content map-popup-content">
       <div id="map-zoom-map" class="map-popup-fill"></div>
+      <div class="map-popup-overlay-bar top" style="display:flex;gap:1rem;justify-content:center;">
+        <label style="display:inline-flex;align-items:center;gap:0.3rem;margin:0;color:#fff;font-size:0.85rem;"><input type="checkbox" id="map-zoom-main-tees-toggle" checked/> Main Tees</label>
+        <label style="display:inline-flex;align-items:center;gap:0.3rem;margin:0;color:#fff;font-size:0.85rem;"><input type="checkbox" id="map-zoom-second-tees-toggle" checked/> 2nd Tees</label>
+      </div>
       <button id="close-map-zoom-btn" class="paper-btn map-popup-btn map-popup-btn-left">Close</button>
     </div>
   </div>
@@ -598,15 +639,37 @@
   </div>
 </section>
 
+<!-- As You Play: build a course live while playing it, one hole at a time -->
+<div id="as-you-play-screen">
+  <div id="ayp-map" class="map-popup-fill"></div>
+
+  <div class="map-popup-overlay-bar top">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+      <button id="ayp-close-btn" type="button" class="paper-btn" style="flex:0 0 auto;min-height:0;padding:0.35rem 0.7rem;font-size:0.8rem;">Close</button>
+      <span id="ayp-hole-label" style="flex:1;text-align:center;font-weight:bold;font-size:0.9rem;">As You Play</span>
+      <button id="ayp-finish-btn" type="button" class="paper-btn" style="flex:0 0 auto;min-height:0;padding:0.35rem 0.7rem;font-size:0.8rem;">Finish</button>
+    </div>
+  </div>
+
+  <div id="ayp-controls" class="map-popup-overlay-bar bottom">
+    <p id="ayp-instructions" style="font-size:0.85rem;margin:0;text-align:center;">Hole controls (length/par, hazards, Mark Tee/Basket, scoring) are coming in the next part.</p>
+  </div>
+</div>
+
 <!-- Putt Practice: full-screen top-down basket view with C1/C2 circles -->
 <div id="putt-practice-screen">
-  <div class="admin-panel-header">
-    <h3 id="putt-practice-hole-label">Putt Practice</h3>
-    <button id="putt-practice-finish-btn" class="paper-btn">Finish Practice</button>
-    <button id="putt-practice-close-btn" class="paper-btn">Close</button>
+  <div id="putt-practice-map" class="map-popup-fill"></div>
+
+  <div class="map-popup-overlay-bar top">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+      <button id="putt-practice-close-btn" type="button" class="paper-btn" style="flex:0 0 auto;min-height:0;padding:0.35rem 0.7rem;font-size:0.8rem;">Close</button>
+      <span id="putt-practice-hole-label" style="flex:1;text-align:center;font-weight:bold;font-size:0.9rem;">Putt Practice</span>
+      <button id="putt-practice-finish-btn" type="button" class="paper-btn" style="flex:0 0 auto;min-height:0;padding:0.35rem 0.7rem;font-size:0.8rem;">Finish</button>
+    </div>
+    <div id="putt-practice-weather" style="display:flex;justify-content:center;padding:0.3rem 0 0;"></div>
   </div>
-  <div id="putt-practice-weather" style="display:flex;justify-content:center;padding:0.4rem 0;"></div>
-  <div id="putt-practice-controls" style="padding:0 0.5rem 0.4rem;text-align:center;">
+
+  <div id="putt-practice-controls" class="map-popup-overlay-bar bottom" style="max-height:45vh;overflow-y:auto;">
     <p id="putt-practice-instructions" style="font-size:0.85rem;margin:0 0 0.4rem;"></p>
     <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
       <button id="putt-practice-add-spot-btn" type="button" class="paper-btn">Add Spot</button>
@@ -633,7 +696,6 @@
     </div>
     <div id="putt-practice-session-log" style="font-size:0.8rem;margin-top:0.5rem;max-height:5.5rem;overflow-y:auto;"></div>
   </div>
-  <div id="putt-practice-map"></div>
 </div>
 
 <!-- Putt Practice: choose existing vs. new putting area -->
@@ -773,16 +835,16 @@
   <script src="js/db.js?v=7"></script>
   <script src="js/stock-courses.js?v=10"></script>
   <script src="js/ratings.js?v=1"></script>
-  <script src="js/map-icons.js?v=23"></script>
+  <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
-  <script src="js/course-wizard.js?v=13"></script>
+  <script src="js/course-wizard.js?v=15"></script>
   <script src="js/field-work.js?v=11"></script>
   <script src="js/admin-panel.js?v=25"></script>
-  <script src="js/round.js?v=13"></script>
-  <script src="js/putt-practice.js?v=8"></script>
+  <script src="js/round.js?v=15"></script>
+  <script src="js/putt-practice.js?v=9"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=124"></script>
+  <script src="js/main.js?v=126"></script>
   <script src="js/namePrompt.js?v=10"></script>
 
 

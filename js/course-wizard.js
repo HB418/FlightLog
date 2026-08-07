@@ -29,7 +29,115 @@ let allBasketMarkers = [];             // [{holeNumbers:[n,...], marker, lat, ln
 let holeMarkersHistory = [];           // [{teeMarker, basketEntry, waypointMarkers}] — one entry per hole, so "Previous Hole" can clean up
 let pendingCourseVisibility = 'private';
 
+// As You Play mode (Segment 1: entry + map scaffold only)
+let pendingAypName = '';
+let pendingAypAddress = '';
+let pendingAypLocation = '';
+let pendingAypLat = null;
+let pendingAypLng = null;
+let aypMap = null;
+let aypMapLocationTracker = null;
+
 /* ---------- New Course modal (3-screen wizard) ---------- */
+
+function openNewCourseModeChoice() {
+  document.getElementById('new-course-mode-choice-modal').classList.add('active');
+}
+
+function handleNcModeAllAtOnce() {
+  document.getElementById('new-course-mode-choice-modal').classList.remove('active');
+  openNewCourseModal();
+}
+
+function handleNcModeAsYouPlay() {
+  document.getElementById('new-course-mode-choice-modal').classList.remove('active');
+  document.getElementById('ayp-course-name').value = '';
+  document.getElementById('ayp-course-address').value = '';
+  document.getElementById('ayp-course-location').value = '';
+  document.getElementById('ayp-info-status').textContent = '';
+  document.getElementById('ayp-info-modal').classList.add('active');
+  document.getElementById('ayp-course-name').focus();
+}
+
+async function handleAypInfoNext() {
+  const name = document.getElementById('ayp-course-name').value.trim();
+  const address = document.getElementById('ayp-course-address').value.trim();
+  const location = document.getElementById('ayp-course-location').value.trim();
+  const statusEl = document.getElementById('ayp-info-status');
+
+  if (!name) {
+    statusEl.textContent = 'Enter a name for this course.';
+    return;
+  }
+
+  // Same address-first-then-name fallback as the All at Once flow.
+  let result = null;
+  const combined = [address, location].filter(Boolean).join(', ');
+  if (combined) {
+    statusEl.textContent = 'Looking up ' + combined + '...';
+    result = await geocodeQuery(combined);
+  }
+  if (!result) {
+    statusEl.textContent = 'Looking up ' + name + '...';
+    result = await geocodeQuery(name + ' disc golf course');
+  }
+  if (!result) {
+    statusEl.textContent = 'Nothing found for that. Try adding a street address, or a nearby town/park name.';
+    return;
+  }
+
+  pendingAypName = name;
+  pendingAypAddress = address;
+  pendingAypLocation = location;
+  pendingAypLat = result.lat;
+  pendingAypLng = result.lng;
+  statusEl.textContent = '';
+
+  document.getElementById('ayp-info-modal').classList.remove('active');
+  launchAsYouPlayScreen();
+}
+
+function launchAsYouPlayScreen() {
+  document.getElementById('ayp-hole-label').textContent = 'As You Play — ' + pendingAypName;
+  document.getElementById('as-you-play-screen').classList.add('active');
+
+  const center = [pendingAypLat, pendingAypLng];
+
+  if (!aypMap && typeof L !== 'undefined') {
+    aypMap = L.map('ayp-map', { zoomSnap: 0.25, zoomDelta: 0.5, maxZoom: 22 });
+    L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 22,
+      maxNativeZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    }).addTo(aypMap);
+    aypMapLocationTracker = startLiveLocationTracking(aypMap);
+
+    // The controls float directly on top of the map (mobile-first —
+    // see the top/bottom overlay bars in index.html), so taps on them
+    // need to be stopped from also reaching the map underneath.
+    document.querySelectorAll('#as-you-play-screen .map-popup-overlay-bar, #as-you-play-screen .paper-btn, #as-you-play-screen select, #as-you-play-screen input')
+      .forEach(el => {
+        L.DomEvent.disableClickPropagation(el);
+        L.DomEvent.disableScrollPropagation(el);
+      });
+  }
+  aypMap.setView(center, 18);
+  setTimeout(() => aypMap.invalidateSize(), 50);
+
+  // Hole controls (length/par, hazards, Mark Tee/Basket, scoring) are
+  // built in the next part — this segment just gets the map open and
+  // centered on the right spot.
+}
+
+function handleAypClose() {
+  document.getElementById('as-you-play-screen').classList.remove('active');
+  if (aypMap) {
+    stopLiveLocationTracking(aypMapLocationTracker);
+    aypMapLocationTracker = null;
+    aypMap.remove();
+    aypMap = null;
+  }
+}
 
 function showNCScreen(id) {
   ['nc-screen-info', 'nc-screen-holes', 'nc-screen-map-prompt'].forEach(sid => {

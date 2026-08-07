@@ -267,7 +267,7 @@ function renderCourseOverlay(map, holes, registry, lineRegistry) {
       pts.push([h.basket.lat, h.basket.lng]);
       const curvedPts = catmullRomSplinePoints(pts);
       const pl = L.polyline(curvedPts, { color: '#FFD400', weight: 2, opacity: 0.85 }).addTo(map);
-      if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl });
+      if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl, kind: 'main' });
     }
 
     // 2nd tee's path: same curve treatment, running to whichever basket
@@ -283,11 +283,66 @@ function renderCourseOverlay(map, holes, registry, lineRegistry) {
         pts2.push([endBasket.lat, endBasket.lng]);
         const curvedPts2 = catmullRomSplinePoints(pts2);
         const pl2 = L.polyline(curvedPts2, { color: '#FFD400', weight: 2, opacity: 0.85, dashArray: '4,6' }).addTo(map);
-        if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl2 });
+        if (lineRegistry) lineRegistry.push({ holeNumber: h.number, polyline: pl2, kind: 'second' });
       }
     }
   });
   return bounds;
+}
+
+/* ---------- Main/2nd tee visibility toggles (both header + zoom maps) ---------- */
+
+let mainTeesVisible = true;
+let secondTeesVisible = true;
+
+function setMarkerVisibility(marker, visible) {
+  const el = marker.getElement();
+  if (el) el.style.display = visible ? '' : 'none';
+  if (marker._holeLabelMarker) {
+    const labelEl = marker._holeLabelMarker.getElement();
+    if (labelEl) labelEl.style.display = visible ? '' : 'none';
+  }
+}
+
+function setLineVisibility(polyline, visible) {
+  const el = polyline.getElement();
+  if (el) el.style.display = visible ? '' : 'none';
+}
+
+// Applied right after every renderCourseOverlay() call, so a freshly
+// (re)built map immediately reflects whatever the checkboxes are
+// currently set to, rather than always starting fully visible.
+// lineRegistry is optional since some callers only track icons.
+function applyTeeVisibilityToRegistry(registry, lineRegistry) {
+  if (registry) {
+    registry.forEach(entry => {
+      if (entry.kind === 'tee') setMarkerVisibility(entry.marker, mainTeesVisible);
+      else if (entry.kind === 'secondTee') setMarkerVisibility(entry.marker, secondTeesVisible);
+    });
+  }
+  if (lineRegistry) {
+    lineRegistry.forEach(entry => {
+      if (entry.kind === 'main') setLineVisibility(entry.polyline, mainTeesVisible);
+      else if (entry.kind === 'second') setLineVisibility(entry.polyline, secondTeesVisible);
+    });
+  }
+}
+
+// The header map and the enlarged map modal each render their own
+// separate set of markers (two independent Leaflet instances) — both
+// need updating together so the two pairs of checkboxes (one per map)
+// always agree with each other regardless of which one was just toggled.
+function applyTeeVisibilityToAllMaps() {
+  applyTeeVisibilityToRegistry(headerMapIcons, headerMapLines);
+  applyTeeVisibilityToRegistry(mapZoomMapIcons, mapZoomMapLines);
+  ['header-map-main-tees-toggle', 'map-zoom-main-tees-toggle'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = mainTeesVisible;
+  });
+  ['header-map-second-tees-toggle', 'map-zoom-second-tees-toggle'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = secondTeesVisible;
+  });
 }
 
 // Swaps the current hole to its "active" look (yellow tee pad, pink
@@ -310,6 +365,11 @@ function updateCurrentHoleStyling(map, iconRegistry, lineRegistry, currentHoleNu
   lineRegistry.forEach(entry => {
     entry.polyline.setStyle({ color: entry.holeNumber === currentHoleNumber ? '#FF2D95' : '#FFD400' });
   });
+  // setIcon() above just replaced every marker's DOM element, which
+  // silently undoes any display:none the visibility toggles had
+  // applied — reassert it so switching holes doesn't quietly re-show
+  // a tee type the user had hidden.
+  applyTeeVisibilityToRegistry(iconRegistry, lineRegistry);
 }
 
 /* ---------- Header map ---------- */
@@ -317,10 +377,12 @@ function updateCurrentHoleStyling(map, iconRegistry, lineRegistry, currentHoleNu
 function showHeaderMap() {
   const imgEl = document.getElementById('header-image');
   const mapEl = document.getElementById('header-map');
+  const teeTogglesEl = document.getElementById('header-map-tee-toggles');
   if (!mapEl) return;
 
   imgEl.classList.add('hide');
   mapEl.classList.remove('hide');
+  if (teeTogglesEl) teeTogglesEl.classList.remove('hide');
 
   const initialCenter = (currentRound && currentRound.courseLat != null && currentRound.courseLng != null)
     ? [currentRound.courseLat, currentRound.courseLng]
@@ -373,6 +435,7 @@ function showHeaderMap() {
           headerMapIcons = [];
           headerMapLines = [];
           renderCourseOverlay(headerMap, currentRound.holes, headerMapIcons, headerMapLines);
+          applyTeeVisibilityToRegistry(headerMapIcons, headerMapLines);
           headerMap.on('zoomend', () => rescaleIconMarkers(headerMap, headerMapIcons));
           if (currentHole) updateCurrentHoleStyling(headerMap, headerMapIcons, headerMapLines, currentHole.number);
         } catch (err) {
@@ -389,7 +452,9 @@ function showHeaderMap() {
 function hideHeaderMap() {
   const imgEl = document.getElementById('header-image');
   const mapEl = document.getElementById('header-map');
+  const teeTogglesEl = document.getElementById('header-map-tee-toggles');
   if (mapEl) mapEl.classList.add('hide');
+  if (teeTogglesEl) teeTogglesEl.classList.add('hide');
   if (imgEl) imgEl.classList.remove('hide');
 }
 
@@ -451,6 +516,7 @@ function openMapZoomModal() {
         mapZoomMapIcons = [];
         mapZoomMapLines = [];
         renderCourseOverlay(mapZoomMap, currentRound.holes, mapZoomMapIcons, mapZoomMapLines);
+        applyTeeVisibilityToRegistry(mapZoomMapIcons, mapZoomMapLines);
         mapZoomMap.on('zoomend', () => rescaleIconMarkers(mapZoomMap, mapZoomMapIcons));
         const currentHole = getCurrentHole(currentRound);
         if (currentHole) updateCurrentHoleStyling(mapZoomMap, mapZoomMapIcons, mapZoomMapLines, currentHole.number);

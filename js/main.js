@@ -26,10 +26,42 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('start-round-btn')?.addEventListener('click', () => openCourseListModal('select'));
-  document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModal);
+  document.getElementById('add-course-btn')?.addEventListener('click', openNewCourseModeChoice);
+  document.getElementById('nc-mode-all-at-once-btn')?.addEventListener('click', handleNcModeAllAtOnce);
+  document.getElementById('nc-mode-as-you-play-btn')?.addEventListener('click', handleNcModeAsYouPlay);
+  document.getElementById('nc-mode-choice-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('new-course-mode-choice-modal').classList.remove('active');
+  });
+  document.getElementById('ayp-info-next-btn')?.addEventListener('click', handleAypInfoNext);
+  document.getElementById('ayp-info-cancel-btn')?.addEventListener('click', () => {
+    document.getElementById('ayp-info-modal').classList.remove('active');
+  });
+  document.getElementById('ayp-close-btn')?.addEventListener('click', handleAypClose);
+  document.getElementById('ayp-finish-btn')?.addEventListener('click', () => {
+    showGenericModal('Finish Course is coming in a later part.');
+  });
+  document.getElementById('ayp-course-address')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleAypInfoNext();
+  });
+  document.getElementById('ayp-course-location')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleAypInfoNext();
+  });
   document.getElementById('field-work-btn')?.addEventListener('click', openFieldWorkChoiceModal);
   document.getElementById('putt-practice-btn')?.addEventListener('click', openPuttingAreaChoiceModal);
   document.getElementById('add-disc-btn')?.addEventListener('click', openAddDiscSearchModal);
+
+  ['header-map-main-tees-toggle', 'map-zoom-main-tees-toggle'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', (e) => {
+      mainTeesVisible = e.target.checked;
+      applyTeeVisibilityToAllMaps();
+    });
+  });
+  ['header-map-second-tees-toggle', 'map-zoom-second-tees-toggle'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', (e) => {
+      secondTeesVisible = e.target.checked;
+      applyTeeVisibilityToAllMaps();
+    });
+  });
   document.getElementById('admin-map-entry-btn')?.addEventListener('click', openAdminPanel);
   document.getElementById('admin-panel-close-btn')?.addEventListener('click', closeAdminPanel);
   document.getElementById('admin-new-course-btn')?.addEventListener('click', () => openAdminEditor(null));

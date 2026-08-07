@@ -261,6 +261,16 @@ async function openPuttingPracticeMode(area) {
   }).addTo(puttPracticeMap);
   puttPracticeMapLocationTracker = startLiveLocationTracking(puttPracticeMap);
 
+  // The controls now float directly on top of the map (mobile-first
+  // layout — see the top/bottom overlay bars in index.html) rather than
+  // sitting above it in normal document flow, so taps on them need to
+  // be stopped from also reaching the map underneath.
+  document.querySelectorAll('#putt-practice-screen .map-popup-overlay-bar, #putt-practice-screen .paper-btn, #putt-practice-screen select, #putt-practice-screen input')
+    .forEach(el => {
+      L.DomEvent.disableClickPropagation(el);
+      L.DomEvent.disableScrollPropagation(el);
+    });
+
   const center = [area.basket.lat, area.basket.lng];
 
   const weatherEl = document.getElementById('putt-practice-weather');
