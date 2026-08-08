@@ -312,8 +312,9 @@ function handleAypMarkBasket() {
 function renderAypScoreInputs() {
   const container = document.getElementById('ayp-score-inputs');
   container.innerHTML = aypPlayerData.map((p, i) =>
-    '<label style="display:block;margin-top:0.5rem;">' + p.name + '<br/>' +
-    '<input type="number" min="1" step="1" class="ayp-player-score-input" data-player-idx="' + i + '" style="width:5rem;text-align:center;"/></label>'
+    '<label style="display:block;margin-top:0.5rem;text-align:center;">' + p.name + '<br/>' +
+    '<input type="number" min="1" step="1" class="ayp-player-score-input" data-player-idx="' + i + '" ' +
+    'style="display:inline-block;width:5rem;text-align:center;margin:0.2rem auto 0;"/></label>'
   ).join('');
 }
 
@@ -348,17 +349,61 @@ function handleAypSubmitScore() {
   aypHoles.push(hole);
   aypPlayerData.forEach((p, i) => { p.scores[hole.number] = strokesByPlayer[i]; });
 
-  const totalPar = aypHoles.reduce((s, h) => s + h.par, 0);
-  const summaryLines = aypPlayerData.map(p => {
-    const total = computePlayerTotal(p);
-    const diff = total - totalPar;
-    const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
-    return p.name + ': ' + total + ' (' + diffText + ')';
+  document.getElementById('ayp-hole-complete-summary').innerHTML = buildAypLiveScorecard();
+  document.getElementById('ayp-hole-complete-modal').classList.add('active');
+}
+
+// A real scorecard, not a text summary — hole numbers, length, par,
+// each player's score per hole, and a running total, exactly like the
+// regular round scorecard. Pre-built with at least 9 hole columns so
+// it looks like an actual card from hole 1 on, with cells for holes
+// not played yet just left blank rather than not existing.
+function buildAypLiveScorecard() {
+  const totalCols = Math.max(9, aypHoles.length);
+  const holeAt = (n) => aypHoles.find(h => h.number === n);
+
+  let html = '<div style="overflow-x:auto;"><table class="round-summary-table"><thead>';
+  html += '<tr><th>Hole</th>';
+  for (let i = 1; i <= totalCols; i++) html += '<th>' + i + '</th>';
+  html += '<th>Total</th></tr>';
+
+  html += '<tr><th>Length</th>';
+  for (let i = 1; i <= totalCols; i++) {
+    const h = holeAt(i);
+    html += '<td>' + (h && h.length ? h.length : '') + '</td>';
+  }
+  html += '<td></td></tr>';
+
+  let totalPar = 0;
+  html += '<tr><th>Par</th>';
+  for (let i = 1; i <= totalCols; i++) {
+    const h = holeAt(i);
+    if (h) totalPar += h.par;
+    html += '<td>' + (h ? h.par : '') + '</td>';
+  }
+  html += '<td>' + (aypHoles.length ? totalPar : '') + '</td></tr>';
+  html += '</thead><tbody>';
+
+  aypPlayerData.forEach(p => {
+    let total = 0;
+    let played = 0;
+    html += '<tr><th>' + p.name + '</th>';
+    for (let i = 1; i <= totalCols; i++) {
+      const s = p.scores[i];
+      if (s != null) { total += s; played++; }
+      html += '<td>' + (s != null ? s : '') + '</td>';
+    }
+    let totalCell = '';
+    if (played > 0) {
+      const diff = total - totalPar;
+      const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
+      totalCell = total + ' (' + diffText + ')';
+    }
+    html += '<td>' + totalCell + '</td></tr>';
   });
 
-  document.getElementById('ayp-hole-complete-summary').innerHTML =
-    'Hole ' + hole.number + ' scored.<br/>' + summaryLines.join('<br/>');
-  document.getElementById('ayp-hole-complete-modal').classList.add('active');
+  html += '</tbody></table></div>';
+  return html;
 }
 
 function handleAypHoleCompleteNext() {

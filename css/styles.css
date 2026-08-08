@@ -1144,25 +1144,35 @@ body.dark-mode .hole-record-box {
 }
 /* ID-scoped so nothing else on the page (PaperCSS's own button
    defaults, the generic .ayp-field rule, anything) can out-specificity
-   this and cause the three controls to end up different sizes again. */
+   this and cause the three controls to end up different sizes again.
+   !important + appearance:none because native <select> elements
+   often ignore plain height/padding until their OS-default chrome is
+   stripped first — that was the actual reason Par kept coming out a
+   different size than the other two even though the CSS "should" win. */
 #ayp-length-par-row input,
 #ayp-length-par-row select,
 #ayp-length-par-row button {
-  width: 4rem;
-  height: 1.8rem;
-  padding: 0;
-  margin: 0;
-  font-size: 0.75rem;
-  line-height: 1.8rem;
-  box-sizing: border-box;
-  border-radius: 0.3rem;
-  border: none;
-  text-align: center;
+  width: 4rem !important;
+  height: 1.8rem !important;
+  min-height: 0 !important;
+  max-height: 1.8rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 0.75rem !important;
+  line-height: 1.8rem !important;
+  box-sizing: border-box !important;
+  border-radius: 0.3rem !important;
+  border: none !important;
+  text-align: center !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  vertical-align: bottom;
 }
 #ayp-length-par-row input,
 #ayp-length-par-row select {
-  background: rgba(255, 255, 255, 0.92);
-  color: #222;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #222 !important;
 }
 .ayp-btn-sm {
   width: 4rem;
