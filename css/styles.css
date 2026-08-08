@@ -1139,27 +1139,30 @@ body.dark-mode .hole-record-box {
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #fff;
 }
-.ayp-field input,
-.ayp-field select {
-  background: rgba(255, 255, 255, 0.92);
-  color: #222;
-  border: none;
-  border-radius: 0.3rem;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.85rem;
-  width: 5rem;
-  text-align: center;
-}
-.ayp-field-sm input,
-.ayp-field-sm select {
+/* ID-scoped so nothing else on the page (PaperCSS's own button
+   defaults, the generic .ayp-field rule, anything) can out-specificity
+   this and cause the three controls to end up different sizes again. */
+#ayp-length-par-row input,
+#ayp-length-par-row select,
+#ayp-length-par-row button {
   width: 4rem;
   height: 1.8rem;
-  padding: 0.2rem 0.4rem;
+  padding: 0;
+  margin: 0;
   font-size: 0.75rem;
+  line-height: 1.8rem;
   box-sizing: border-box;
+  border-radius: 0.3rem;
+  border: none;
+  text-align: center;
+}
+#ayp-length-par-row input,
+#ayp-length-par-row select {
+  background: rgba(255, 255, 255, 0.92);
+  color: #222;
 }
 .ayp-btn-sm {
   width: 4rem;

@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=97"/>
+  <link rel="stylesheet" href="css/styles.css?v=98"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -704,12 +704,16 @@
         <button id="ayp-confirm-tee-btn" type="button" class="paper-btn ayp-btn-sm">Confirm Tee</button>
       </div>
     </div>
-    <div id="ayp-score-row" class="hide">
-      <div id="ayp-score-inputs" class="ayp-field-row"></div>
-      <div style="text-align:center;margin-top:0.4rem;">
-        <button id="ayp-submit-score-btn" type="button" class="paper-btn ayp-btn-sm">Submit</button>
-      </div>
-    </div>
+  </div>
+</div>
+
+<!-- As You Play: score entry popup, shown right after the basket is marked -->
+<div id="ayp-score-modal" class="custom-modal">
+  <div class="custom-modal-content" style="max-width:360px;text-align:center;">
+    <h4 id="ayp-score-modal-title">Enter Scores</h4>
+    <div id="ayp-score-inputs"></div>
+    <p id="ayp-score-modal-status" style="font-size:0.8rem;color:#c00;min-height:1.1rem;margin-top:0.5rem;"></p>
+    <button id="ayp-submit-score-btn" class="paper-btn" style="margin-top:0.25rem;">Submit</button>
   </div>
 </div>
 
@@ -903,7 +907,7 @@
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
-  <script src="js/course-wizard.js?v=20"></script>
+  <script src="js/course-wizard.js?v=21"></script>
   <script src="js/field-work.js?v=17"></script>
   <script src="js/admin-panel.js?v=25"></script>
   <script src="js/round.js?v=16"></script>

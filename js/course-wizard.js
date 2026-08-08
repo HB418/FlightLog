@@ -201,8 +201,7 @@ function resetAypHoleControls() {
   document.getElementById('ayp-unknown-length-row').classList.remove('hide');
   document.getElementById('ayp-length-par-row').classList.remove('hide');
   document.getElementById('ayp-tee-rotation-row').classList.add('hide');
-  document.getElementById('ayp-score-row').classList.add('hide');
-  document.getElementById('ayp-score-input').value = '';
+  document.getElementById('ayp-score-modal').classList.remove('active');
   aypTeeLatLng = null;
   aypTeeRotation = 0;
   aypBasketLatLng = null;
@@ -301,19 +300,20 @@ function handleAypMarkBasket() {
     }
 
     document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+    document.getElementById('ayp-instructions').textContent = '';
+    // Score entry happens in a popup, not the bottom bar — the bar's
+    // height doesn't change here, so no recenter needed on this step.
     renderAypScoreInputs();
-    document.getElementById('ayp-score-row').classList.remove('hide');
-    document.getElementById('ayp-instructions').textContent = 'Enter each player\'s score for this hole.';
-    // Bar just grew again (score inputs) — recenter on the basket.
-    recenterAypAbovePoint(pos.lat, pos.lng);
+    document.getElementById('ayp-score-modal-title').textContent = 'Hole ' + aypCurrentHoleNumber + ' — Enter Scores';
+    document.getElementById('ayp-score-modal').classList.add('active');
   });
 }
 
 function renderAypScoreInputs() {
   const container = document.getElementById('ayp-score-inputs');
   container.innerHTML = aypPlayerData.map((p, i) =>
-    '<label class="ayp-field ayp-field-sm">' + p.name +
-    '<input type="number" min="1" step="1" class="ayp-player-score-input" data-player-idx="' + i + '"/></label>'
+    '<label style="display:block;margin-top:0.5rem;">' + p.name + '<br/>' +
+    '<input type="number" min="1" step="1" class="ayp-player-score-input" data-player-idx="' + i + '" style="width:5rem;text-align:center;"/></label>'
   ).join('');
 }
 
@@ -323,11 +323,13 @@ function handleAypSubmitScore() {
   for (const input of inputs) {
     const strokes = parseInt(input.value, 10);
     if (!Number.isFinite(strokes) || strokes < 1) {
-      document.getElementById('ayp-instructions').textContent = 'Enter a valid score for every player.';
+      document.getElementById('ayp-score-modal-status').textContent = 'Enter a valid score for every player.';
       return;
     }
     strokesByPlayer.push(strokes);
   }
+  document.getElementById('ayp-score-modal-status').textContent = '';
+  document.getElementById('ayp-score-modal').classList.remove('active');
 
   const hole = {
     number: aypCurrentHoleNumber,
