@@ -44,7 +44,8 @@ let aypBasketMarker = null;
 let aypTeeLatLng = null;
 let aypTeeRotation = 0;
 let aypBasketLatLng = null;
-let aypScores = []; // strokes per completed hole, parallel to aypHoles
+let aypPlayers = []; // player names, set up on the info screen
+let aypPlayerData = []; // [{name, scores: {holeNumber: strokes}}] — mirrors round.js's player shape so it can be saved as a real round
 let savingFlowIsAyp = false; // which Finish flow the shared save-visibility-modal should call back into
 
 /* ---------- New Course modal (3-screen wizard) ---------- */
@@ -64,8 +65,36 @@ function handleNcModeAsYouPlay() {
   document.getElementById('ayp-course-address').value = '';
   document.getElementById('ayp-course-location').value = '';
   document.getElementById('ayp-info-status').textContent = '';
+  document.getElementById('ayp-new-player-input').value = '';
+  aypPlayers = [localStorage.getItem('userName') || 'Player 1'];
+  renderAypPlayersList();
   document.getElementById('ayp-info-modal').classList.add('active');
   document.getElementById('ayp-course-name').focus();
+}
+
+function renderAypPlayersList() {
+  const el = document.getElementById('ayp-players-list');
+  el.innerHTML = aypPlayers.map((name, i) =>
+    '<span style="display:inline-block;margin:0.15rem;padding:0.2rem 0.6rem;background:#eee;border-radius:1rem;font-size:0.85rem;">' +
+    name + ' <a href="#" data-idx="' + i + '" class="ayp-remove-player" style="color:#c00;text-decoration:none;">&times;</a></span>'
+  ).join('');
+  el.querySelectorAll('.ayp-remove-player').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (aypPlayers.length <= 1) return; // always need at least one player
+      aypPlayers.splice(Number(a.dataset.idx), 1);
+      renderAypPlayersList();
+    });
+  });
+}
+
+function handleAypAddPlayer() {
+  const input = document.getElementById('ayp-new-player-input');
+  const name = input.value.trim();
+  if (!name) return;
+  aypPlayers.push(name);
+  input.value = '';
+  renderAypPlayersList();
 }
 
 async function handleAypInfoNext() {
@@ -111,7 +140,7 @@ function launchAsYouPlayScreen() {
 
   aypCurrentHoleNumber = 1;
   aypHoles = [];
-  aypScores = [];
+  aypPlayerData = aypPlayers.map(name => ({ name, scores: {} }));
 
   const center = [pendingAypLat, pendingAypLng];
 
@@ -222,16 +251,30 @@ function handleAypMarkBasket() {
     }
 
     document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+    renderAypScoreInputs();
     document.getElementById('ayp-score-row').classList.remove('hide');
-    document.getElementById('ayp-instructions').textContent = 'Enter your score for this hole.';
+    document.getElementById('ayp-instructions').textContent = 'Enter each player\'s score for this hole.';
   });
 }
 
+function renderAypScoreInputs() {
+  const container = document.getElementById('ayp-score-inputs');
+  container.innerHTML = aypPlayerData.map((p, i) =>
+    '<label class="ayp-field ayp-field-sm">' + p.name +
+    '<input type="number" min="1" step="1" class="ayp-player-score-input" data-player-idx="' + i + '"/></label>'
+  ).join('');
+}
+
 function handleAypSubmitScore() {
-  const strokes = parseInt(document.getElementById('ayp-score-input').value, 10);
-  if (!Number.isFinite(strokes) || strokes < 1) {
-    document.getElementById('ayp-instructions').textContent = 'Enter a valid score for this hole.';
-    return;
+  const inputs = Array.from(document.querySelectorAll('.ayp-player-score-input'));
+  const strokesByPlayer = [];
+  for (const input of inputs) {
+    const strokes = parseInt(input.value, 10);
+    if (!Number.isFinite(strokes) || strokes < 1) {
+      document.getElementById('ayp-instructions').textContent = 'Enter a valid score for every player.';
+      return;
+    }
+    strokesByPlayer.push(strokes);
   }
 
   const hole = {
@@ -249,15 +292,18 @@ function handleAypSubmitScore() {
   if (Object.keys(hazards).length) hole.hazards = hazards;
 
   aypHoles.push(hole);
-  aypScores.push(strokes);
+  aypPlayerData.forEach((p, i) => { p.scores[hole.number] = strokesByPlayer[i]; });
 
-  const totalStrokes = aypScores.reduce((s, v) => s + v, 0);
   const totalPar = aypHoles.reduce((s, h) => s + h.par, 0);
-  const diff = totalStrokes - totalPar;
-  const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
+  const summaryLines = aypPlayerData.map(p => {
+    const total = computePlayerTotal(p);
+    const diff = total - totalPar;
+    const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
+    return p.name + ': ' + total + ' (' + diffText + ')';
+  });
 
-  document.getElementById('ayp-hole-complete-summary').textContent =
-    'Hole ' + hole.number + ': ' + strokes + ' strokes. Running total: ' + totalStrokes + ' (' + diffText + ')';
+  document.getElementById('ayp-hole-complete-summary').innerHTML =
+    'Hole ' + hole.number + ' scored.<br/>' + summaryLines.join('<br/>');
   document.getElementById('ayp-hole-complete-modal').classList.add('active');
 }
 
@@ -301,12 +347,17 @@ async function finishAsYouPlayCourse() {
   }
   const courseId = await addCourse(db, courseRecord);
 
-  const playerName = localStorage.getItem('userName') || 'Player 1';
   const totalPar = aypHoles.reduce((s, h) => s + (Number(h.par) || 0), 0);
-  const total = aypScores.reduce((s, v) => s + v, 0);
   const courseForRating = { holes: aypHoles };
-  const roundRating = computeRoundRating(courseForRating, total);
-  const scoresList = aypHoles.map((h, i) => ({ hole: h.number, strokes: aypScores[i] }));
+  const players = aypPlayerData.map(p => {
+    const total = computePlayerTotal(p);
+    return {
+      name: p.name,
+      total: total,
+      roundRating: computeRoundRating(courseForRating, total),
+      scores: Object.entries(p.scores).map(([hole, strokes]) => ({ hole: Number(hole), strokes }))
+    };
+  });
 
   const roundRecord = {
     courseId: courseId,
@@ -315,7 +366,7 @@ async function finishAsYouPlayCourse() {
     totalPar: totalPar,
     weather: null,
     holes: aypHoles.map(h => ({ number: h.number, par: h.par })),
-    players: [{ name: playerName, total: total, roundRating: roundRating, scores: scoresList }]
+    players: players
   };
   await addRound(db, roundRecord);
   await recomputeFlightRating();
@@ -323,12 +374,12 @@ async function finishAsYouPlayCourse() {
   handleAypClose();
   await loadCourseOptions();
 
-  const diff = total - totalPar;
-  const diffText = diff === 0 ? 'Even' : (diff > 0 ? '+' + diff : String(diff));
-  showGenericModal(
-    'Course "' + pendingAypName + '" saved (' + pendingCourseVisibility + ') with ' + aypHoles.length +
-    ' hole(s). Your round is saved to Stats: ' + total + ' (' + diffText + ').'
-  );
+  // Same read-only scorecard used for a regular round's "Round
+  // Complete" summary — full hole-by-hole breakdown for every player,
+  // not just a one-line total.
+  document.getElementById('round-summary-content').innerHTML =
+    buildRoundSummaryScorecard({ holes: aypHoles, players: aypPlayerData }, totalPar);
+  document.getElementById('round-summary-modal').classList.add('active');
 }
 
 function showNCScreen(id) {

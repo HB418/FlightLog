@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=94"/>
+  <link rel="stylesheet" href="css/styles.css?v=95"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -106,7 +106,13 @@
       <input type="text" id="ayp-course-address" placeholder="Street address" style="width:100%;margin-bottom:0.75rem;"/>
       <label for="ayp-course-location">Location</label>
       <input type="text" id="ayp-course-location" placeholder="City, State" style="width:100%;margin-bottom:0.75rem;"/>
-      <p id="ayp-info-status" style="font-size:0.8rem;opacity:0.8;min-height:1.1rem;"></p>
+      <label>Players</label>
+      <div id="ayp-players-list" style="margin-bottom:0.4rem;"></div>
+      <div style="display:flex;gap:0.4rem;">
+        <input type="text" id="ayp-new-player-input" placeholder="Player name" style="flex:1;"/>
+        <button id="ayp-add-player-btn" type="button" class="paper-btn" style="min-height:0;padding:0.35rem 0.7rem;">Add</button>
+      </div>
+      <p id="ayp-info-status" style="font-size:0.8rem;opacity:0.8;min-height:1.1rem;margin-top:0.5rem;"></p>
       <div style="text-align:center;margin-top:1rem;">
         <button id="ayp-info-next-btn" class="paper-btn">Next</button>
         <button id="ayp-info-cancel-btn" class="paper-btn">Cancel</button>
@@ -181,7 +187,7 @@
 
   <!-- Round Summary Modal -->
   <div id="round-summary-modal" class="custom-modal">
-    <div class="custom-modal-content" style="max-width:480px;width:95%;">
+    <div class="custom-modal-content" style="max-width:640px;width:96vw;">
       <h4>Round Complete</h4>
       <div id="round-summary-content"></div>
       <button id="close-round-summary-btn" class="paper-btn">OK</button>
@@ -688,9 +694,11 @@
       <label class="ayp-check"><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
       <label class="ayp-check"><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
     </div>
-    <div id="ayp-score-row" class="hide ayp-field-row">
-      <label class="ayp-field ayp-field-sm">Your score<input type="number" id="ayp-score-input" min="1" step="1"/></label>
-      <button id="ayp-submit-score-btn" type="button" class="paper-btn ayp-btn-sm">Submit</button>
+    <div id="ayp-score-row" class="hide">
+      <div id="ayp-score-inputs" class="ayp-field-row"></div>
+      <div style="text-align:center;margin-top:0.4rem;">
+        <button id="ayp-submit-score-btn" type="button" class="paper-btn ayp-btn-sm">Submit</button>
+      </div>
     </div>
   </div>
 </div>
@@ -885,14 +893,14 @@
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
-  <script src="js/course-wizard.js?v=18"></script>
+  <script src="js/course-wizard.js?v=19"></script>
   <script src="js/field-work.js?v=17"></script>
   <script src="js/admin-panel.js?v=25"></script>
-  <script src="js/round.js?v=15"></script>
+  <script src="js/round.js?v=16"></script>
   <script src="js/putt-practice.js?v=9"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=129"></script>
+  <script src="js/main.js?v=130"></script>
   <script src="js/namePrompt.js?v=11"></script>
 
 

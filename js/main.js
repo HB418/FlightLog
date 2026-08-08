@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('new-course-mode-choice-modal').classList.remove('active');
   });
   document.getElementById('ayp-info-next-btn')?.addEventListener('click', handleAypInfoNext);
+  document.getElementById('ayp-add-player-btn')?.addEventListener('click', handleAypAddPlayer);
+  document.getElementById('ayp-new-player-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAypAddPlayer(); }
+  });
   document.getElementById('ayp-info-cancel-btn')?.addEventListener('click', () => {
     document.getElementById('ayp-info-modal').classList.remove('active');
   });

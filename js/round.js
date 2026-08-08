@@ -736,6 +736,35 @@ function computePlayerTotal(player) {
 
 /* ---------- Finish round ---------- */
 
+// A static (non-editable) version of the scorecard for the "Round
+// Complete" summary — hole numbers, par, length (when any hole has
+// one), every player's per-hole score, and a total/vs-par column, all
+// in one table instead of the previous plain player-total list.
+function buildRoundSummaryScorecard(round, totalPar) {
+  const holes = round.holes || [];
+  const hasLength = holes.some(h => h.length);
+
+  let html = '<div style="overflow-x:auto;"><table class="round-summary-table"><thead>';
+  html += '<tr><th>Hole</th>' + holes.map(h => '<th>' + h.number + '</th>').join('') + '<th>Total</th></tr>';
+  html += '<tr><th>Par</th>' + holes.map(h => '<td>' + h.par + '</td>').join('') + '<td>' + totalPar + '</td></tr>';
+  if (hasLength) {
+    html += '<tr><th>Length</th>' + holes.map(h => '<td>' + (h.length || '\u2014') + '</td>').join('') + '<td></td></tr>';
+  }
+  html += '</thead><tbody>';
+
+  round.players.forEach(p => {
+    const total = computePlayerTotal(p);
+    const diff = total - totalPar;
+    const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' + diff : String(diff));
+    html += '<tr><th>' + p.name + '</th>' +
+      holes.map(h => '<td>' + (p.scores[h.number] != null ? p.scores[h.number] : '\u2014') + '</td>').join('') +
+      '<td>' + total + ' (' + diffText + ')</td></tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
 async function finishRound() {
   if (!currentRound) return;
 
@@ -769,12 +798,7 @@ async function finishRound() {
   clearInProgressRound();
 
   const summaryEl = document.getElementById('round-summary-content');
-  summaryEl.innerHTML = currentRound.players.map(p => {
-    const total = computePlayerTotal(p);
-    const diff = total - totalPar;
-    const diffText = diff === 0 ? 'Even' : (diff > 0 ? ('+' + diff) : String(diff));
-    return '<p><strong>' + p.name + '</strong>: ' + total + ' (' + diffText + ')</p>';
-  }).join('');
+  summaryEl.innerHTML = buildRoundSummaryScorecard(currentRound, totalPar);
 
   document.getElementById('round-summary-modal').classList.add('active');
 }

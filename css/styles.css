@@ -1191,6 +1191,30 @@ body.dark-mode .hole-record-box {
   margin: 0;
   accent-color: #038C7F;
 }
+.round-summary-table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.round-summary-table th,
+.round-summary-table td {
+  border: 1px solid #ccc;
+  padding: 0.25rem 0.4rem;
+  text-align: center;
+}
+.round-summary-table thead th:first-child,
+.round-summary-table tbody th {
+  text-align: left;
+  background: rgba(0, 0, 0, 0.04);
+}
+body.dark-mode .round-summary-table th,
+body.dark-mode .round-summary-table td {
+  border-color: #555;
+}
+body.dark-mode .round-summary-table thead th:first-child,
+body.dark-mode .round-summary-table tbody th {
+  background: rgba(255, 255, 255, 0.08);
+}
 /* Small button row inside the top overlay bar — e.g. the 2nd-tee/2nd-basket
    delete controls — flexed and centered under the instructions text. */
 .map-popup-inline-btn-row {
