@@ -1153,6 +1153,24 @@ body.dark-mode .hole-record-box {
   width: 5rem;
   text-align: center;
 }
+.ayp-field-sm input,
+.ayp-field-sm select {
+  width: 3.4rem;
+  padding: 0.25rem 0.3rem;
+  font-size: 0.8rem;
+}
+.ayp-btn-sm {
+  min-height: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+}
+.ayp-instructions {
+  font-size: 0.85rem;
+  margin: 0 0 0.4rem;
+  text-align: center;
+  color: #FFD400;
+  font-weight: bold;
+}
 .ayp-check-row {
   display: flex;
   gap: 0.8rem;

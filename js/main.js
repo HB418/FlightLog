@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('ayp-close-btn')?.addEventListener('click', handleAypClose);
   document.getElementById('ayp-mark-tee-btn')?.addEventListener('click', handleAypMarkTee);
   document.getElementById('ayp-mark-basket-btn')?.addEventListener('click', handleAypMarkBasket);
+  document.getElementById('ayp-tee-rotation')?.addEventListener('input', handleAypTeeRotationInput);
+  document.getElementById('ayp-confirm-tee-btn')?.addEventListener('click', handleAypConfirmTee);
   document.getElementById('ayp-submit-score-btn')?.addEventListener('click', handleAypSubmitScore);
   document.getElementById('ayp-hole-complete-next-btn')?.addEventListener('click', handleAypHoleCompleteNext);
   document.getElementById('ayp-finish-btn')?.addEventListener('click', () => {

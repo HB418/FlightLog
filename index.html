@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=93"/>
+  <link rel="stylesheet" href="css/styles.css?v=94"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -656,10 +656,10 @@
   </div>
 
   <div id="ayp-controls" class="map-popup-overlay-bar bottom">
-    <p id="ayp-instructions" style="font-size:0.85rem;margin:0 0 0.4rem;text-align:center;"></p>
+    <p id="ayp-instructions" class="ayp-instructions"></p>
     <div class="ayp-field-row">
-      <label class="ayp-field">Length (ft)<input type="number" id="ayp-hole-length-input" min="1"/></label>
-      <label class="ayp-field">Par
+      <label class="ayp-field ayp-field-sm">Length (ft)<input type="number" id="ayp-hole-length-input" min="1"/></label>
+      <label class="ayp-field ayp-field-sm">Par
         <select id="ayp-hole-par-select">
           <option value="2">2</option>
           <option value="3" selected>3</option>
@@ -669,6 +669,15 @@
           <option value="7">7</option>
         </select>
       </label>
+      <button id="ayp-mark-tee-btn" type="button" class="paper-btn ayp-btn-sm">Mark Tee</button>
+      <button id="ayp-mark-basket-btn" type="button" class="paper-btn ayp-btn-sm hide">Mark Basket</button>
+    </div>
+    <div id="ayp-tee-rotation-row" class="hide" style="margin-top:0.4rem;">
+      <label for="ayp-tee-rotation" class="ayp-instructions" style="display:block;font-size:0.75rem;">Tee facing direction</label>
+      <input type="range" id="ayp-tee-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
+      <div style="text-align:center;margin-top:0.3rem;">
+        <button id="ayp-confirm-tee-btn" type="button" class="paper-btn ayp-btn-sm">Confirm Tee</button>
+      </div>
     </div>
     <div class="ayp-check-row">
       <label class="ayp-check"><input type="checkbox" id="ayp-unknown-length-checkbox"/> Don't know hole length</label>
@@ -679,13 +688,9 @@
       <label class="ayp-check"><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
       <label class="ayp-check"><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
     </div>
-    <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.5rem;">
-      <button id="ayp-mark-tee-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Mark Tee</button>
-      <button id="ayp-mark-basket-btn" type="button" class="paper-btn hide" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;">Mark Basket</button>
-    </div>
     <div id="ayp-score-row" class="hide ayp-field-row">
-      <label class="ayp-field">Your score<input type="number" id="ayp-score-input" min="1" step="1"/></label>
-      <button id="ayp-submit-score-btn" type="button" class="paper-btn" style="min-height:0;padding:0.45rem 0.8rem;font-size:0.85rem;margin-left:0.4rem;">Submit</button>
+      <label class="ayp-field ayp-field-sm">Your score<input type="number" id="ayp-score-input" min="1" step="1"/></label>
+      <button id="ayp-submit-score-btn" type="button" class="paper-btn ayp-btn-sm">Submit</button>
     </div>
   </div>
 </div>
@@ -880,14 +885,14 @@
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
-  <script src="js/course-wizard.js?v=17"></script>
+  <script src="js/course-wizard.js?v=18"></script>
   <script src="js/field-work.js?v=17"></script>
   <script src="js/admin-panel.js?v=25"></script>
   <script src="js/round.js?v=15"></script>
   <script src="js/putt-practice.js?v=9"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=128"></script>
+  <script src="js/main.js?v=129"></script>
   <script src="js/namePrompt.js?v=11"></script>
 
 

@@ -42,6 +42,7 @@ let aypHoles = []; // completed holes so far: {number, length, par, hazards, tee
 let aypTeeMarker = null;
 let aypBasketMarker = null;
 let aypTeeLatLng = null;
+let aypTeeRotation = 0;
 let aypBasketLatLng = null;
 let aypScores = []; // strokes per completed hole, parallel to aypHoles
 let savingFlowIsAyp = false; // which Finish flow the shared save-visibility-modal should call back into
@@ -150,9 +151,11 @@ function resetAypHoleControls() {
   document.getElementById('ayp-hazard-ob').checked = false;
   document.getElementById('ayp-mark-tee-btn').classList.remove('hide');
   document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+  document.getElementById('ayp-tee-rotation-row').classList.add('hide');
   document.getElementById('ayp-score-row').classList.add('hide');
   document.getElementById('ayp-score-input').value = '';
   aypTeeLatLng = null;
+  aypTeeRotation = 0;
   aypBasketLatLng = null;
 }
 
@@ -161,13 +164,39 @@ function handleAypMarkTee() {
   captureAccurateGpsPosition((pos) => {
     if (!pos) { document.getElementById('ayp-instructions').textContent = 'Enter length/par if known, then walk to the tee and press Mark Tee.'; return; }
     aypTeeLatLng = pos;
+    aypTeeRotation = 0;
+    // Center exactly on the marked point (both axes) so it can't land
+    // hidden under the top/bottom overlay bars.
+    aypMap.setView([pos.lat, pos.lng], aypMap.getZoom());
     const scale = scaleForZoom(aypMap);
     if (aypTeeMarker) aypMap.removeLayer(aypTeeMarker);
-    aypTeeMarker = L.marker([pos.lat, pos.lng], { icon: makeTeeDivIcon(0, scale) }).addTo(aypMap);
+    aypTeeMarker = L.marker([pos.lat, pos.lng], { icon: makeTeeDivIcon(0, scale), draggable: true }).addTo(aypMap);
+    aypTeeMarker._rotationDeg = 0;
+    aypTeeMarker.on('drag', (ev) => {
+      const ll = ev.target.getLatLng();
+      aypTeeLatLng = { lat: ll.lat, lng: ll.lng };
+    });
     document.getElementById('ayp-mark-tee-btn').classList.add('hide');
-    document.getElementById('ayp-mark-basket-btn').classList.remove('hide');
-    document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.';
+    document.getElementById('ayp-tee-rotation-row').classList.remove('hide');
+    document.getElementById('ayp-tee-rotation').value = 0;
+    document.getElementById('ayp-instructions').textContent = 'Drag to adjust, set facing direction, then Confirm Tee.';
   });
+}
+
+function handleAypTeeRotationInput(e) {
+  aypTeeRotation = Number(e.target.value);
+  if (!aypTeeMarker) return;
+  aypTeeMarker._rotationDeg = aypTeeRotation;
+  const el = aypTeeMarker.getElement();
+  if (!el) return;
+  const img = el.querySelector('img');
+  if (img) img.style.transform = 'rotate(' + aypTeeRotation + 'deg)';
+}
+
+function handleAypConfirmTee() {
+  document.getElementById('ayp-tee-rotation-row').classList.add('hide');
+  document.getElementById('ayp-mark-basket-btn').classList.remove('hide');
+  document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.';
 }
 
 function handleAypMarkBasket() {
@@ -175,9 +204,16 @@ function handleAypMarkBasket() {
   captureAccurateGpsPosition((pos) => {
     if (!pos) { document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.'; return; }
     aypBasketLatLng = pos;
+    // Same centering fix as the tee — land exactly on the marked
+    // point instead of wherever it happened to fall in the old view.
+    aypMap.setView([pos.lat, pos.lng], aypMap.getZoom());
     const scale = scaleForZoom(aypMap);
     if (aypBasketMarker) aypMap.removeLayer(aypBasketMarker);
-    aypBasketMarker = L.marker([pos.lat, pos.lng], { icon: makeBasketIcon(scale) }).addTo(aypMap);
+    aypBasketMarker = L.marker([pos.lat, pos.lng], { icon: makeBasketIcon(scale), draggable: true }).addTo(aypMap);
+    aypBasketMarker.on('drag', (ev) => {
+      const ll = ev.target.getLatLng();
+      aypBasketLatLng = { lat: ll.lat, lng: ll.lng };
+    });
 
     const unknownLength = document.getElementById('ayp-unknown-length-checkbox').checked;
     if (unknownLength && aypTeeLatLng) {
@@ -202,7 +238,7 @@ function handleAypSubmitScore() {
     number: aypCurrentHoleNumber,
     length: Number(document.getElementById('ayp-hole-length-input').value) || 0,
     par: Number(document.getElementById('ayp-hole-par-select').value) || 3,
-    tee: aypTeeLatLng,
+    tee: { lat: aypTeeLatLng.lat, lng: aypTeeLatLng.lng, rotation: aypTeeRotation },
     basket: aypBasketLatLng
   };
   const hazards = {};
