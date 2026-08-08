@@ -65,11 +65,28 @@ function handleNcModeAsYouPlay() {
   document.getElementById('ayp-course-address').value = '';
   document.getElementById('ayp-course-location').value = '';
   document.getElementById('ayp-info-status').textContent = '';
+  document.getElementById('ayp-info-modal').classList.add('active');
+  document.getElementById('ayp-course-name').focus();
+}
+
+// Shown AFTER the course name/address has been entered and geocoded —
+// not upfront, so the first screen stays focused on just finding the
+// course instead of asking for two unrelated things at once.
+function openAypPlayersModal() {
   document.getElementById('ayp-new-player-input').value = '';
   aypPlayers = [localStorage.getItem('userName') || 'Player 1'];
   renderAypPlayersList();
+  document.getElementById('ayp-players-modal').classList.add('active');
+}
+
+function handleAypPlayersBack() {
+  document.getElementById('ayp-players-modal').classList.remove('active');
   document.getElementById('ayp-info-modal').classList.add('active');
-  document.getElementById('ayp-course-name').focus();
+}
+
+function handleAypStartPlay() {
+  document.getElementById('ayp-players-modal').classList.remove('active');
+  launchAsYouPlayScreen();
 }
 
 function renderAypPlayersList() {
@@ -132,7 +149,7 @@ async function handleAypInfoNext() {
   statusEl.textContent = '';
 
   document.getElementById('ayp-info-modal').classList.remove('active');
-  launchAsYouPlayScreen();
+  openAypPlayersModal();
 }
 
 function launchAsYouPlayScreen() {
@@ -180,6 +197,9 @@ function resetAypHoleControls() {
   document.getElementById('ayp-hazard-ob').checked = false;
   document.getElementById('ayp-mark-tee-btn').classList.remove('hide');
   document.getElementById('ayp-mark-basket-btn').classList.add('hide');
+  document.getElementById('ayp-hazards-row').classList.remove('hide');
+  document.getElementById('ayp-unknown-length-row').classList.remove('hide');
+  document.getElementById('ayp-length-par-row').classList.remove('hide');
   document.getElementById('ayp-tee-rotation-row').classList.add('hide');
   document.getElementById('ayp-score-row').classList.add('hide');
   document.getElementById('ayp-score-input').value = '';
@@ -194,9 +214,6 @@ function handleAypMarkTee() {
     if (!pos) { document.getElementById('ayp-instructions').textContent = 'Enter length/par if known, then walk to the tee and press Mark Tee.'; return; }
     aypTeeLatLng = pos;
     aypTeeRotation = 0;
-    // Center exactly on the marked point (both axes) so it can't land
-    // hidden under the top/bottom overlay bars.
-    aypMap.setView([pos.lat, pos.lng], aypMap.getZoom());
     const scale = scaleForZoom(aypMap);
     if (aypTeeMarker) aypMap.removeLayer(aypTeeMarker);
     aypTeeMarker = L.marker([pos.lat, pos.lng], { icon: makeTeeDivIcon(0, scale), draggable: true }).addTo(aypMap);
@@ -206,9 +223,18 @@ function handleAypMarkTee() {
       aypTeeLatLng = { lat: ll.lat, lng: ll.lng };
     });
     document.getElementById('ayp-mark-tee-btn').classList.add('hide');
+    // Hide everything not needed while just confirming facing
+    // direction — keeps the bar as short as possible during this step.
+    document.getElementById('ayp-hazards-row').classList.add('hide');
+    document.getElementById('ayp-unknown-length-row').classList.add('hide');
+    document.getElementById('ayp-length-par-row').classList.add('hide');
     document.getElementById('ayp-tee-rotation-row').classList.remove('hide');
     document.getElementById('ayp-tee-rotation').value = 0;
     document.getElementById('ayp-instructions').textContent = 'Drag to adjust, set facing direction, then Confirm Tee.';
+    // The bar's height just changed (rows hidden, rotation row shown) —
+    // recenter using the ACTUAL new height so the tee lands above it
+    // instead of wherever the old, different-sized bar implied.
+    recenterAypAbovePoint(pos.lat, pos.lng);
   });
 }
 
@@ -224,8 +250,35 @@ function handleAypTeeRotationInput(e) {
 
 function handleAypConfirmTee() {
   document.getElementById('ayp-tee-rotation-row').classList.add('hide');
+  document.getElementById('ayp-hazards-row').classList.remove('hide');
+  document.getElementById('ayp-unknown-length-row').classList.remove('hide');
+  document.getElementById('ayp-length-par-row').classList.remove('hide');
   document.getElementById('ayp-mark-basket-btn').classList.remove('hide');
   document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.';
+  // Bar shrank back down now that the rotation row is gone — recenter
+  // again on the tee so it's still positioned correctly, not just
+  // wherever it ended up while the taller bar was showing.
+  if (aypTeeLatLng) recenterAypAbovePoint(aypTeeLatLng.lat, aypTeeLatLng.lng);
+}
+
+// Re-centers the map on a point so it lands in the middle of whatever
+// space is ACTUALLY still visible between the top and bottom overlay
+// bars right now — measured fresh each call, not assumed, since the
+// bottom bar's height changes a lot between steps (rotation slider,
+// hazard checkboxes, score inputs all show/hide at different points).
+function recenterAypAbovePoint(lat, lng) {
+  if (!aypMap) return;
+  aypMap.setView([lat, lng], aypMap.getZoom());
+  const mapEl = document.getElementById('ayp-map');
+  const controlsEl = document.getElementById('ayp-controls');
+  const topBarEl = document.querySelector('#as-you-play-screen .map-popup-overlay-bar.top');
+  const totalH = mapEl.clientHeight || aypMap.getSize().y;
+  const bottomH = controlsEl.offsetHeight;
+  const topH = topBarEl ? topBarEl.offsetHeight : 0;
+  const visibleCenterY = topH + (totalH - topH - bottomH) / 2;
+  const mapCenterY = totalH / 2;
+  const dy = mapCenterY - visibleCenterY;
+  aypMap.panBy([0, dy], { animate: false });
 }
 
 function handleAypMarkBasket() {
@@ -233,9 +286,6 @@ function handleAypMarkBasket() {
   captureAccurateGpsPosition((pos) => {
     if (!pos) { document.getElementById('ayp-instructions').textContent = 'Walk to the basket, then press Mark Basket.'; return; }
     aypBasketLatLng = pos;
-    // Same centering fix as the tee — land exactly on the marked
-    // point instead of wherever it happened to fall in the old view.
-    aypMap.setView([pos.lat, pos.lng], aypMap.getZoom());
     const scale = scaleForZoom(aypMap);
     if (aypBasketMarker) aypMap.removeLayer(aypBasketMarker);
     aypBasketMarker = L.marker([pos.lat, pos.lng], { icon: makeBasketIcon(scale), draggable: true }).addTo(aypMap);
@@ -254,6 +304,8 @@ function handleAypMarkBasket() {
     renderAypScoreInputs();
     document.getElementById('ayp-score-row').classList.remove('hide');
     document.getElementById('ayp-instructions').textContent = 'Enter each player\'s score for this hole.';
+    // Bar just grew again (score inputs) — recenter on the basket.
+    recenterAypAbovePoint(pos.lat, pos.lng);
   });
 }
 

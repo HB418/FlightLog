@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=95"/>
+  <link rel="stylesheet" href="css/styles.css?v=97"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -106,16 +106,26 @@
       <input type="text" id="ayp-course-address" placeholder="Street address" style="width:100%;margin-bottom:0.75rem;"/>
       <label for="ayp-course-location">Location</label>
       <input type="text" id="ayp-course-location" placeholder="City, State" style="width:100%;margin-bottom:0.75rem;"/>
-      <label>Players</label>
+      <p id="ayp-info-status" style="font-size:0.8rem;opacity:0.8;min-height:1.1rem;"></p>
+      <div style="text-align:center;margin-top:1rem;">
+        <button id="ayp-info-next-btn" class="paper-btn">Next</button>
+        <button id="ayp-info-cancel-btn" class="paper-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- As You Play: players (shown after the course is found, not before) -->
+  <div id="ayp-players-modal" class="custom-modal">
+    <div class="custom-modal-content" style="max-width:480px;width:95%;text-align:left;">
+      <h4 style="text-align:center;">Players</h4>
       <div id="ayp-players-list" style="margin-bottom:0.4rem;"></div>
       <div style="display:flex;gap:0.4rem;">
         <input type="text" id="ayp-new-player-input" placeholder="Player name" style="flex:1;"/>
         <button id="ayp-add-player-btn" type="button" class="paper-btn" style="min-height:0;padding:0.35rem 0.7rem;">Add</button>
       </div>
-      <p id="ayp-info-status" style="font-size:0.8rem;opacity:0.8;min-height:1.1rem;margin-top:0.5rem;"></p>
       <div style="text-align:center;margin-top:1rem;">
-        <button id="ayp-info-next-btn" class="paper-btn">Next</button>
-        <button id="ayp-info-cancel-btn" class="paper-btn">Cancel</button>
+        <button id="ayp-start-play-btn" class="paper-btn">Start</button>
+        <button id="ayp-players-back-btn" class="paper-btn">Back</button>
       </div>
     </div>
   </div>
@@ -663,7 +673,16 @@
 
   <div id="ayp-controls" class="map-popup-overlay-bar bottom">
     <p id="ayp-instructions" class="ayp-instructions"></p>
-    <div class="ayp-field-row">
+    <div id="ayp-hazards-row" class="ayp-check-row">
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-water"/> Water</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-trees"/> Trees</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
+      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
+    </div>
+    <div id="ayp-unknown-length-row" class="ayp-check-row">
+      <label class="ayp-check"><input type="checkbox" id="ayp-unknown-length-checkbox"/> Don't know hole length</label>
+    </div>
+    <div id="ayp-length-par-row" class="ayp-field-row">
       <label class="ayp-field ayp-field-sm">Length (ft)<input type="number" id="ayp-hole-length-input" min="1"/></label>
       <label class="ayp-field ayp-field-sm">Par
         <select id="ayp-hole-par-select">
@@ -678,21 +697,12 @@
       <button id="ayp-mark-tee-btn" type="button" class="paper-btn ayp-btn-sm">Mark Tee</button>
       <button id="ayp-mark-basket-btn" type="button" class="paper-btn ayp-btn-sm hide">Mark Basket</button>
     </div>
-    <div id="ayp-tee-rotation-row" class="hide" style="margin-top:0.4rem;">
-      <label for="ayp-tee-rotation" class="ayp-instructions" style="display:block;font-size:0.75rem;">Tee facing direction</label>
-      <input type="range" id="ayp-tee-rotation" min="-180" max="180" value="0" step="1" style="width:100%;"/>
-      <div style="text-align:center;margin-top:0.3rem;">
+    <div id="ayp-tee-rotation-row" class="hide" style="margin-top:0.3rem;">
+      <label for="ayp-tee-rotation" class="ayp-instructions" style="display:block;font-size:0.7rem;margin:0;">Tee facing direction</label>
+      <input type="range" id="ayp-tee-rotation" min="-180" max="180" value="0" step="1" style="width:100%;margin:0.15rem 0;"/>
+      <div style="text-align:center;">
         <button id="ayp-confirm-tee-btn" type="button" class="paper-btn ayp-btn-sm">Confirm Tee</button>
       </div>
-    </div>
-    <div class="ayp-check-row">
-      <label class="ayp-check"><input type="checkbox" id="ayp-unknown-length-checkbox"/> Don't know hole length</label>
-    </div>
-    <div class="ayp-check-row">
-      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-water"/> Water</label>
-      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-trees"/> Trees</label>
-      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-dogleg"/> Dogleg</label>
-      <label class="ayp-check"><input type="checkbox" id="ayp-hazard-ob"/> OB</label>
     </div>
     <div id="ayp-score-row" class="hide">
       <div id="ayp-score-inputs" class="ayp-field-row"></div>
@@ -893,14 +903,14 @@
   <script src="js/ratings.js?v=1"></script>
   <script src="js/map-icons.js?v=24"></script>
   <script src="js/weather.js?v=4"></script>
-  <script src="js/course-wizard.js?v=19"></script>
+  <script src="js/course-wizard.js?v=20"></script>
   <script src="js/field-work.js?v=17"></script>
   <script src="js/admin-panel.js?v=25"></script>
   <script src="js/round.js?v=16"></script>
   <script src="js/putt-practice.js?v=9"></script>
   <script src="js/discs.js?v=16"></script>
   <script src="js/og-mode.js?v=7"></script>
-  <script src="js/main.js?v=130"></script>
+  <script src="js/main.js?v=131"></script>
   <script src="js/namePrompt.js?v=11"></script>
 
 

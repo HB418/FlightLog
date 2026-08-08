@@ -40,6 +40,8 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('ayp-info-cancel-btn')?.addEventListener('click', () => {
     document.getElementById('ayp-info-modal').classList.remove('active');
   });
+  document.getElementById('ayp-start-play-btn')?.addEventListener('click', handleAypStartPlay);
+  document.getElementById('ayp-players-back-btn')?.addEventListener('click', handleAypPlayersBack);
   document.getElementById('ayp-close-btn')?.addEventListener('click', handleAypClose);
   document.getElementById('ayp-mark-tee-btn')?.addEventListener('click', handleAypMarkTee);
   document.getElementById('ayp-mark-basket-btn')?.addEventListener('click', handleAypMarkBasket);
