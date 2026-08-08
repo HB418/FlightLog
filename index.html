@@ -10,7 +10,7 @@
   <!-- Leaflet (map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <!-- Custom Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=99"/>
+  <link rel="stylesheet" href="css/styles.css?v=100"/>
     <link rel="stylesheet" href="css/modal.css"/>
   <!-- Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
@@ -694,8 +694,11 @@
           <option value="7">7</option>
         </select>
       </label>
-      <button id="ayp-mark-tee-btn" type="button" class="paper-btn ayp-btn-sm">Mark Tee</button>
-      <button id="ayp-mark-basket-btn" type="button" class="paper-btn ayp-btn-sm hide">Mark Basket</button>
+      <span class="ayp-field ayp-field-sm">
+        <span style="visibility:hidden;">&nbsp;</span>
+        <button id="ayp-mark-tee-btn" type="button" class="paper-btn ayp-btn-sm">Mark Tee</button>
+        <button id="ayp-mark-basket-btn" type="button" class="paper-btn ayp-btn-sm hide">Mark Basket</button>
+      </span>
     </div>
     <div id="ayp-tee-rotation-row" class="hide" style="margin-top:0.3rem;">
       <label for="ayp-tee-rotation" class="ayp-instructions" style="display:block;font-size:0.7rem;margin:0;">Tee facing direction</label>
